@@ -7,7 +7,8 @@ Instead of RAG (re-deriving answers from raw documents every time), this system 
 ## Installation
 
 ```bash
-/plugin install kfchou/wiki-skills
+/plugin marketplace add kfchou/wiki-skills
+/plugin install wiki-skills@kfchou/wiki-skills
 ```
 
 ## Skills
