@@ -21,7 +21,7 @@ Ask:
 3. **What types of sources will you add?** (papers, URLs, code files, transcripts, etc.)
 4. **What categories should `index.md` use?**
    - Research default: `Sources | Entities | Concepts | Analyses`
-   - Codebase default: `Modules | APIs | Decisions | Flows`
+   - Codebase default: `Modules | APIs | Decisions | Flows` — see `codebase.md` in this skill's directory for detailed codebase guidance
    - Or specify custom
 
 ### 2. Create directory structure
@@ -77,6 +77,9 @@ Operations: init, ingest, query, update, lint
 - index.md is updated on every operation that adds or changes pages
 - All pages live flat in wiki/pages/ — no subdirectories
 - overview.md reflects the current synthesis across all sources
+<if codebase domain>
+- README boundary: wiki pages must not duplicate README content. Extract structural signals; link to the README for operational content (setup, contributing, running). When ingesting any README, also evaluate it for gaps and suggest edits.
+</if>
 ```
 
 ### 4. Write `wiki/index.md`
