@@ -20,6 +20,7 @@ Instead of RAG (re-deriving answers from raw documents every time), this system 
 | `wiki-query` | Ask a question against the wiki; optionally save the answer back |
 | `wiki-lint` | Health audit: contradictions, orphans, broken links, coverage gaps |
 | `wiki-update` | Revise existing pages when knowledge changes |
+| `wiki-audit` | Per-page citation audit: verify every footnote against its source, flag uncited claims |
 
 ## How It Works
 
@@ -43,6 +44,7 @@ Instead of RAG (re-deriving answers from raw documents every time), this system 
 wiki-init          → bootstrap a new wiki
 wiki-ingest        → add sources one at a time (repeat)
 wiki-query         → ask questions; save good answers back as pages
+wiki-audit         → fact-check a single page against its sources
 wiki-lint          → periodic health check (every 5-10 ingests)
 wiki-update        → revise pages when knowledge changes
 ```
@@ -52,6 +54,7 @@ wiki-update        → revise pages when knowledge changes
 - **`wiki-ingest`** surfaces key takeaways and asks what to emphasize *before* writing anything. After creating a source page, it runs a backlink audit — scanning existing pages to add bidirectional links.
 - **`wiki-query`** always reads the wiki (never answers from memory). Always offers to file the answer back as a new page with `[[citations]]`.
 - **`wiki-lint`** writes a severity-tiered report (`🔴 errors / 🟡 warnings / 🔵 info`) to `wiki/pages/lint-<date>.md`, offers concrete fixes, and logs unconditionally.
+- **`wiki-audit`** fact-checks one page against its sources. Phase A flags uncited factual claims; Phase B dispatches one subagent per source in parallel to verify each footnote (quote citations are string-matched, `[synthesis]` citations are judged against the cited range). Writes a verdict report to `wiki/pages/audit-<page>-<date>.md` and offers concrete fixes.
 - **`wiki-update`** always shows diffs before writing, always cites the source of new information, sweeps all pages for the same stale claim, and logs unconditionally.
 
 ## Use Cases
