@@ -4,6 +4,10 @@ A Claude Code plugin implementing [Karpathy's LLM Wiki pattern](https://gist.git
 
 Instead of RAG (re-deriving answers from raw documents every time), this system builds and maintains a **wiki**: a structured, interlinked collection of markdown files that gets richer with every source you add and every question you ask.
 
+## Why Wikis work well
+
+The wiki format is remarkably similar to how the Claude Code Harness manages memory interally ([read about it here](https://kfchou.github.io/claude-code-memory-system/)). Since Claude is trained on the Claude Code Harness, that means Claude is already familiar with this structure. Unsure about other coding harnesses though.
+
 ## Installation
 
 ```bash
