@@ -68,3 +68,4 @@ Source: <URL or description>
 - **Skipping the downstream check** — An update that contradicts a page's content while leaving pages that link to it unchanged creates silent inconsistency.
 - **Skipping the log** — Every change must be logged. The log is append-only; if `log.md` doesn't exist, create it.
 - **Batch-writing without confirmation** — Show each diff individually. The user may accept some changes and reject others.
+- **Appending instead of updating** — Do not add `## [date] update` sections to page bodies. Edit the relevant section in-place, bump the `updated` frontmatter date, and log the change in `log.md`. If you find existing date-stamped sections, offer to integrate them in-place as part of the update.

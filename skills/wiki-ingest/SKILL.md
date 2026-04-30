@@ -172,6 +172,12 @@ Pages written: <slug>
 Pages updated: <comma-separated list>
 ```
 
+## Common Mistakes
+
+- **Appending chronological updates instead of editing in-place** — Wiki pages are living documents, not journals. Do not add sections like `## April 27 update:` or `**Update:**` followed by new content. Update the relevant section in-place, bump the `updated` frontmatter date, and record what changed in `log.md`. The log is the append-only record; pages are the current truth.
+- **Skipping the backlink audit (step 7)** — A wiki's value compounds through bidirectional links. Always scan existing pages for entities this source introduces.
+- **Summarizing the abstract instead of synthesizing** — The Summary section should reflect your own synthesis, not a rephrased abstract.
+
 ### 11. Report to user
 
 - Summary page: `wiki/pages/<slug>.md`
