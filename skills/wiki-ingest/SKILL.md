@@ -77,6 +77,39 @@ updated: <today>
 <how this connects to or updates existing knowledge>
 ```
 
+### 5b. Cite as you write — do not skip
+
+While drafting the Summary, Key Takeaways, and any other prose section, every
+non-common-knowledge factual claim must carry a footnote. Read the **Citations**
+section in `SCHEMA.md` for the full convention.
+
+Two citation kinds, three valid targets:
+
+```
+Quote:     [^N]: <target> <locator> — "<verbatim quote>"
+Synthesis: [^N]: <target> <locator> [synthesis] — <what supports the claim>
+
+<target> is one of:
+  [[source-slug]]      — a source wiki page (preferred for the source you're ingesting)
+  raw/<file>           — a path, for drive-by citations to other local files
+  <URL>                — a live URL or post
+```
+
+For the source being ingested, use `[[<this-source-slug>]]` — `wiki-ingest`
+is creating that page now, so the target exists by the time the page is read.
+
+If you cannot produce either citation kind for a claim, you do not have a
+citation. Find one, weaken the claim ("the paper suggests..."), or drop it.
+
+Footnotes go at the bottom of the page, below all sections. Number them
+sequentially in order of first reference.
+
+### 5c. Self-check before continuing
+
+Re-read the draft once. Scan for unfootnoted factual claims — this is the most
+common failure mode in long ingest sessions. For each, add a footnote or revise
+the wording. Only then move on to entity pages.
+
 ### 6. Update entity and concept pages
 
 For each entity/concept touched by this source:
@@ -138,6 +171,12 @@ Update the frontmatter `updated` date.
 Pages written: <slug>
 Pages updated: <comma-separated list>
 ```
+
+## Common Mistakes
+
+- **Appending chronological updates instead of editing in-place** — Wiki pages are living documents, not journals. Do not add sections like `## April 27 update:` or `**Update:**` followed by new content. Update the relevant section in-place, bump the `updated` frontmatter date, and record what changed in `log.md`. The log is the append-only record; pages are the current truth.
+- **Skipping the backlink audit (step 7)** — A wiki's value compounds through bidirectional links. Always scan existing pages for entities this source introduces.
+- **Summarizing the abstract instead of synthesizing** — The Summary section should reflect your own synthesis, not a rephrased abstract.
 
 ### 11. Report to user
 

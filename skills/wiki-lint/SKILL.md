@@ -32,6 +32,7 @@ Read `wiki/index.md`, `wiki/overview.md`, and all files in `wiki/pages/`. Build 
 - **Orphan pages** — pages with zero inbound `[[slug]]` links from any other page (excluding index.md and overview.md)
 - **Contradictions** — claims in one page that directly conflict with claims in another (look for the same entity described differently: dates, counts, names, relationships)
 - **Stale claims** — pages not updated within 90 days that contain "current", "latest", "recent", "state-of-the-art", or year literals two or more years old
+- **Chronological update sections** — page bodies containing date-stamped headers matching patterns like `## [Month]`, `## [Month] \d+`, or `**[Month] \d+ update` — these are journal entries that should be integrated in-place
 
 **🔵 Info (consider addressing)**
 

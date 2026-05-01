@@ -64,9 +64,56 @@ updated: YYYY-MM-DD
 Use `[[slug]]` where slug = filename without `.md`.
 Example: `[[transformer-architecture]]` → `wiki/pages/transformer-architecture.md`
 
+## Citations
+
+Cite every non-common-knowledge factual claim. "Common knowledge" = uncontroversial,
+undergraduate-level facts in this wiki's domain. Granularity is paragraph or claim,
+never per-sentence. If you cannot produce a citation in one of the forms below,
+find one, weaken the claim, or drop it.
+
+Format: Markdown footnotes. Two citation kinds, three valid targets.
+
+**Quote citation** (preferred):
+```
+The model uses 8 attention heads.[^1]
+
+[^1]: [[attention-is-all-you-need]] §3.2.2 — "We employ h = 8 parallel attention layers"
+```
+
+**Synthesis citation** (when no single quote captures the claim):
+```
+The architecture is fundamentally an encoder-decoder with attention.[^2]
+
+[^2]: [[attention-is-all-you-need]] §3.2-3.4 [synthesis] — encoder, decoder, and
+      attention sections together describe the full multi-head architecture
+```
+
+Three rules for every footnote:
+
+1. **The cited target is one of three forms:**
+   - `[[source-slug]]` — a source-type wiki page (preferred for sources you've
+     ingested via `wiki-ingest`)
+   - `raw/<file>` or `assets/<file>` — a path to a local file (for drive-by
+     citations where a synthesis page isn't worth creating)
+   - `<URL>` — a live URL, tweet, or ephemeral source (no local copy required)
+
+   Never cite entity, concept, or analysis pages — those are syntheses, not sources.
+
+2. **A locator is present:** `§<section>`, `p.<n>`, `[HH:MM:SS]` for transcripts,
+   URL anchor for web, or `(YYYY-MM-DD)` for dated posts.
+
+3. **Either a verbatim quote, or the `[synthesis]` tag plus a description** of
+   what the cited range supports. No third option.
+
+**Drive-by citation examples:**
+```
+[^3]: raw/scaling-laws.pdf p.7 — "loss scales as a power law in compute"
+[^4]: https://twitter.com/user/status/123 (2026-04-15) — "<tweet text>"
+```
+
 ## Log Entry Format
 ## [YYYY-MM-DD] <operation> | <title>
-Operations: init, ingest, query, update, lint
+Operations: init, ingest, query, update, lint, audit
 
 ## Index Categories
 <one per line, matching the user's chosen taxonomy>
