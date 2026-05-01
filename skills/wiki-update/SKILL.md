@@ -11,6 +11,8 @@ Revise existing wiki pages. Always show diffs before writing. Always log. Always
 
 Find `SCHEMA.md` (search from cwd upward, or `~/wikis/`). If not found, tell the user to run `wiki-init` first. Read it to get wiki root path and conventions.
 
+**Link style.** Read `link_style:` from `SCHEMA.md`. If the field is missing or `<wiki-root>/config/link-style.md` does not exist, default to `obsidian` (`[[slug]]`). Otherwise, read `<wiki-root>/config/link-style.md` for the emit and parse rules. Use the `## Parse` rule when scanning existing pages for cross-references; use the `## Emit` rule whenever you write new cross-references or citations.
+
 ## Process
 
 ### 1. Identify what to update
@@ -35,10 +37,10 @@ Ask for confirmation before writing each page. Do not batch-apply changes withou
 
 ### 3. Check for downstream effects
 
-After identifying the primary pages to update, grep for `[[slug]]` references to those pages across all of `wiki/pages/`. For each page that links to an updated page:
+After identifying the primary pages to update, scan all of `wiki/pages/` for cross-references to those pages using the `## Parse` rule from `config/link-style.md`. For each page that links to an updated page:
 
 - Does the update change anything that page asserts?
-- If yes: flag it explicitly — "[[other-page]] may also need updating based on this change"
+- If yes: flag it explicitly — "<other-page slug> may also need updating based on this change"
 - Offer to update it with the same confirm-before-write flow
 
 ### 4. Contradiction sweep

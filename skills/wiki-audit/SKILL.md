@@ -11,6 +11,8 @@ Verify a single wiki page against its cited sources. Two phases: detect uncited 
 
 Find `SCHEMA.md` (search from cwd upward, or `~/wikis/`). If not found, tell the user to run `wiki-init` first. Read `SCHEMA.md` for the wiki root path and the **Citations** section (the rules and footnote format the audit enforces).
 
+**Link style.** Read `link_style:` from `SCHEMA.md`. If the field is missing or `<wiki-root>/config/link-style.md` does not exist, default to `obsidian` (`[[slug]]`). Otherwise, read `<wiki-root>/config/link-style.md`. Footnote slug-targets in audited pages may be in either obsidian or markdown form — use the `## Parse` rule to recognize them both. The audit report you write is a wiki page, so its own cross-references and slug-target examples emit using the `## Emit` rule.
+
 **If `SCHEMA.md` has no Citations section** (older wiki, initialized before this skill existed): use the fallback convention below for this run, and offer at the end to append the Citations section to `SCHEMA.md` so future operations stay consistent.
 
 ```
@@ -21,9 +23,9 @@ Quote:     [^N]: <target> <locator> — "<verbatim quote>"
 Synthesis: [^N]: <target> <locator> [synthesis] — <what supports the claim>
 
 Three rules:
-1. Target is one of: [[source-slug]] (a source-type wiki page), raw/<file> or
-   assets/<file> (a local file path), or a URL. Never an entity / concept /
-   analysis page.
+1. Target is one of: a slug reference to a source-type wiki page (form per the
+   wiki's link_style; fallback `[[source-slug]]`), raw/<file> or assets/<file>
+   (a local file path), or a URL. Never an entity / concept / analysis page.
 2. A locator is present (§section, p.N, [HH:MM:SS], URL anchor, dated post).
 3. Either a verbatim quote, or the [synthesis] tag plus a description of what
    the cited range supports.
@@ -55,13 +57,13 @@ The subagent applies the SCHEMA.md "what to cite" rule: paragraph- or claim-leve
 ### 3. Phase B — cited claim verification (N subagents, parallel)
 
 For every footnote definition in the page, parse:
-- The **target** — one of `[[source-slug]]`, a path under `raw/`/`assets/`, or a URL.
+- The **target** — one of a slug reference (matched via `## Parse` from `config/link-style.md` — extract the slug from either obsidian or markdown form), a path under `raw/`/`assets/`, or a URL.
 - The **locator** (§section, p.N, timestamp, URL anchor, dated post).
 - Either the verbatim **quote** or the `[synthesis]` description.
 
 **Resolve each target to readable content:**
 
-- `[[source-slug]]` → read `wiki/pages/<source-slug>.md` to find the raw file path (in its `**Source:**` line). Then read that raw file from `raw/` or `assets/`.
+- slug reference → read `wiki/pages/<slug>.md` to find the raw file path (in its `**Source:**` line). Then read that raw file from `raw/` or `assets/`.
 - `raw/<file>` or `assets/<file>` → read the file directly.
 - `<URL>` → check whether a cached copy exists in `assets/` (filename derived from URL). If yes, read it. If not, mark the footnote `🚫 source-missing` (do not re-fetch — that belongs in the fix step).
 
@@ -84,7 +86,7 @@ For ❌ and ⚠️, the note must include what the source actually says, so the 
 
 ### 4. Write the audit report
 
-Always write — do not ask permission. Path: `wiki/pages/audit-<page-slug>-<today>.md`.
+Always write — do not ask permission. Path: `wiki/pages/audit-<page-slug>-<today>.md`. The template below uses obsidian-style slug references for readability; in the actual report, every slug reference must follow the `## Emit` rule from `config/link-style.md`.
 
 ```markdown
 ---
@@ -141,8 +143,8 @@ Apply only after user confirmation. Show the exact diff before each write.
 Always append — do not ask permission:
 
 ```
-## [<today>] audit | [[<page-slug>]] — N supported, N unsupported, N partial, N uncited
-Report: [[audit-<page-slug>-<today>]]
+## [<today>] audit | <slug-reference to <page-slug>> — N supported, N unsupported, N partial, N uncited
+Report: <slug-reference to audit-<page-slug>-<today>>
 Fixed: <list, or "none">
 ```
 

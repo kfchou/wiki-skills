@@ -13,6 +13,8 @@ Search for `SCHEMA.md` starting from the current directory and upward, or in com
 
 Read `SCHEMA.md` to learn: wiki root path, page frontmatter format, cross-reference convention, log entry format, index category taxonomy.
 
+**Link style.** Read `link_style:` from `SCHEMA.md`. If the field is missing or `<wiki-root>/config/link-style.md` does not exist, default to `obsidian` and use `[[slug]]` as the cross-reference form. Otherwise, read `<wiki-root>/config/link-style.md` for the exact emit and parse rules. Every cross-reference and citation slug-target you write below must follow that file's `## Emit` rule. Every scan of existing pages (the backlink audit in step 7) must follow its `## Parse` rule.
+
 ## Process
 
 ### 1. Accept the source
@@ -70,7 +72,7 @@ updated: <today>
 
 ## Entities & Concepts
 
-<list of entities/concepts as [[slug]] links>
+<list of entities/concepts as cross-reference links — emit each in the wiki's link_style; see config/link-style.md>
 
 ## Relation to Other Wiki Pages
 
@@ -90,13 +92,13 @@ Quote:     [^N]: <target> <locator> — "<verbatim quote>"
 Synthesis: [^N]: <target> <locator> [synthesis] — <what supports the claim>
 
 <target> is one of:
-  [[source-slug]]      — a source wiki page (preferred for the source you're ingesting)
+  <slug-reference>     — a source wiki page, written in the wiki's link_style
+                         (preferred for the source you're ingesting)
   raw/<file>           — a path, for drive-by citations to other local files
   <URL>                — a live URL or post
 ```
 
-For the source being ingested, use `[[<this-source-slug>]]` — `wiki-ingest`
-is creating that page now, so the target exists by the time the page is read.
+For the source being ingested, the slug-reference target is `<this-source-slug>` written in the form prescribed by `config/link-style.md`. `wiki-ingest` is creating that page now, so the target exists by the time the page is read.
 
 If you cannot produce either citation kind for a claim, you do not have a
 citation. Find one, weaken the claim ("the paper suggests..."), or drop it.
@@ -133,24 +135,24 @@ updated: <today>
 
 ## Appearances in Sources
 
-- [[source-slug]] — <one-line note>
+- <slug-reference to source-slug, in the wiki's link_style> — <one-line note>
 
 ## Related Concepts
 
-- [[related-slug]] — <relationship>
+- <slug-reference to related-slug, in the wiki's link_style> — <relationship>
 ```
 
 ### 7. Backlink audit — do not skip
 
-Scan ALL existing pages in `wiki/pages/` for any that mention this source's entities/concepts but don't yet link to the new page. Add `[[new-slug]]` references where appropriate.
+Scan ALL existing pages in `wiki/pages/` for any that mention this source's entities/concepts but don't yet link to the new page. Use the `## Parse` regex from `config/link-style.md` to detect existing references. Add new cross-references to the new page using the `## Emit` form from the same file.
 
 This is the step most commonly skipped. A compounding wiki's value comes from bidirectional links.
 
 ### 8. Update `wiki/index.md`
 
-Add an entry under the correct category:
+Add an entry under the correct category, using the wiki's link_style for the slug:
 ```
-- [[<slug>]] — <one-line summary> _(ingested <date>)_
+- <slug-reference to <slug>> — <one-line summary> _(ingested <date>)_
 ```
 
 For any new entity/concept pages created, add those too.
