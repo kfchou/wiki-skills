@@ -77,6 +77,10 @@ Works for any domain where you're accumulating knowledge over time:
 
 > "The wiki keeps getting richer with every source you add and every question you ask."
 
+## Contributing
+
+PRs, issues, and ideas are welcomed.
+
 ## License
 
 MIT
