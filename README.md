@@ -12,7 +12,14 @@ The wiki format is remarkably similar to how the Claude Code Harness manages mem
 
 ```bash
 /plugin marketplace add kfchou/wiki-skills
-/plugin install wiki-skills@kfchou/wiki-skills
+/plugin install wiki-skills@wiki-skills
+```
+
+## Uninstallation
+
+```bash
+/plugin uninstall wiki-skills@wiki-skills
+/plugin marketplace remove wiki-skills
 ```
 
 ## Skills
