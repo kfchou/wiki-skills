@@ -77,16 +77,19 @@ Format: Markdown footnotes. Two citation kinds, three valid targets.
 ```
 The model uses 8 attention heads.[^1]
 
-[^1]: [[attention-is-all-you-need]] §3.2.2 — "We employ h = 8 parallel attention layers"
+[^1]: [[attention-is-all-you-need]] §3.2.2 L142-143 — "We employ h = 8 parallel attention layers"
 ```
 
 **Synthesis citation** (when no single quote captures the claim):
 ```
 The architecture is fundamentally an encoder-decoder with attention.[^2]
 
-[^2]: [[attention-is-all-you-need]] §3.2-3.4 [synthesis] — encoder, decoder, and
+[^2]: [[attention-is-all-you-need]] §3.2-3.4 [synthesis] L138-202 — encoder, decoder, and
       attention sections together describe the full multi-head architecture
 ```
+
+`L142-143` / `L138-202` are line ranges in the raw source file. For a quote they mark
+the lines the quote is taken from; for a synthesis they mark the block being summarized.
 
 Three rules for every footnote:
 
@@ -99,8 +102,25 @@ Three rules for every footnote:
 
    Never cite entity, concept, or analysis pages — those are syntheses, not sources.
 
-2. **A locator is present:** `§<section>`, `p.<n>`, `[HH:MM:SS]` for transcripts,
-   URL anchor for web, or `(YYYY-MM-DD)` for dated posts.
+2. **A locator is present.** Always a semantic locator: `§<section>`, `p.<n>`,
+   `[HH:MM:SS]` for transcripts, URL anchor for web, or `(YYYY-MM-DD)` for dated posts.
+
+   **Plus a line-range when the source is text-addressable.** If the resolved raw
+   file is markdown, plaintext, code, or cached HTML, append a line-range token after
+   the semantic locator:
+
+   - `L<start>-<end>` — a range, e.g. `L142-145`
+   - `L<n>` — a single line, e.g. `L142`
+   - `L142-145,L201-203` — disjoint ranges
+
+   The line range refers to lines in the **raw source file** resolved from the target
+   (`[[slug]]` → its `**Source:**` raw path; or a direct `raw/<file>`/`assets/<file>`).
+   `raw/` is immutable, so these line numbers are stable references.
+
+   A line-range is **required** for text-addressable sources and applies to BOTH
+   citation kinds — a `[synthesis]` footnote marks the block it summarizes with `L…`
+   just as a quote marks the lines it quotes. **Exempt** (semantic locator only, no
+   `L…`): PDFs, transcripts, and live URLs with no local cached copy.
 
 3. **Either a verbatim quote, or the `[synthesis]` tag plus a description** of
    what the cited range supports. No third option.
