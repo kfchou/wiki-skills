@@ -17,7 +17,7 @@ Find `SCHEMA.md` (search from cwd upward, or `~/wikis/`). If not found, tell the
 
 The user may provide:
 - **Specific page names** — update those pages
-- **New information** — read `wiki/index.md` to find affected pages, then read those pages
+- **New information** — regenerate the index (`python bin/generate-index.py`), read `wiki/index.md` to find affected pages, then read those pages
 - **A lint report** — work through its recommendations item by item
 
 ### 2. For each page to update
@@ -50,9 +50,15 @@ After identifying the primary pages to update, grep for `[[slug]]` references to
 
 If the new information contradicts something in the wiki: search all pages for the contradicted claim before updating. It may appear in more than one place. Update all occurrences, not just the most obvious one.
 
-### 5. Update `wiki/index.md`
+### 5. Regenerate `wiki/index.md`
 
-If the one-line summary for any updated page has changed, update it in `index.md`. Update the `updated` date in the page's frontmatter.
+Never hand-edit the index. If the page's one-line summary or category changed, edit the
+`summary` / `category` **frontmatter** on the page itself. Always bump the page's
+`updated` date (leave `created` untouched). Then regenerate:
+
+```
+python bin/generate-index.py
+```
 
 ### 6. Update `wiki/overview.md`
 

@@ -48,23 +48,27 @@ Read both pages in full. Merge the loser's content into the survivor:
 - Combine sections; do not duplicate facts already present.
 - **Preserve every citation.** Carry footnotes over, renumbering sequentially. Never drop
   a footnote during the fold — a merged claim keeps its provenance.
-- Union the frontmatter `sources` lists; keep the broader/more-correct `title` and `tags`.
-- Bump the survivor's `updated` date.
+- Union the frontmatter `sources` lists; keep the broader/more-correct `title`,
+  `category`, `summary`, and `tags`.
+- Keep the **earlier** `created` date of the two; bump the survivor's `updated` date.
 
 Show the proposed survivor page as a diff and confirm before writing.
 
 ### 3. Rewrite all inbound links
 
-Grep every page in `wiki/pages/` (plus `index.md` and `overview.md`) for `[[<loser-slug>]]`.
-Rewrite each to `[[<survivor-slug>]]`. Watch for:
+Grep every page in `wiki/pages/` and `overview.md` for `[[<loser-slug>]]` (skip
+`index.md` — it is generated and will be rebuilt). Rewrite each to `[[<survivor-slug>]]`.
+Watch for:
 - A page that linked to *both* — collapse to a single link, fix surrounding prose.
 - Link text/aliases that named the loser — update the wording to read naturally.
 
 Show the list of affected pages and the edits; confirm before writing.
 
-### 4. Delete the loser page
+### 4. Delete the loser page and regenerate the index
 
-Remove `wiki/pages/<loser-slug>.md`. Remove its entry from `wiki/index.md`.
+Remove `wiki/pages/<loser-slug>.md`. Do not touch `index.md` by hand — regenerate it so
+the loser's entry disappears and the survivor's reflects its merged frontmatter:
+`python bin/generate-index.py`.
 
 ### 5. Link-resolution sweep
 
@@ -105,25 +109,28 @@ Confirm the slug plan with the user before writing.
 
 ### 2. Create the qualified pages
 
-Write each new page with the content for its sense only. Split the frontmatter `sources`
-so each page lists only the sources that actually support it. Carry the relevant footnotes
-to each page, renumbering sequentially. Show each new page and confirm before writing.
+Write each new page with the content for its sense only, with full frontmatter
+(`title`, `category`, a distinct one-line `summary`, `tags`, `created: <today>`,
+`updated: <today>`). Split the frontmatter `sources` so each page lists only the sources
+that actually support it. Carry the relevant footnotes to each page, renumbering
+sequentially. Show each new page and confirm before writing.
 
 ### 3. Repoint inbound links per sense
 
-Grep every page for `[[<original-slug>]]`. For **each** occurrence, decide which sense it
-meant from its context and rewrite it to the correct qualified slug. This is the
-judgment-heavy step — do not blanket-replace. When a single page referenced both senses,
-split it into two links.
+Grep every page in `wiki/pages/` and `overview.md` for `[[<original-slug>]]` (skip the
+generated `index.md`). For **each** occurrence, decide which sense it meant from its
+context and rewrite it to the correct qualified slug. This is the judgment-heavy step —
+do not blanket-replace. When a single page referenced both senses, split it into two links.
 
 Show each repointing decision (link, surrounding context, chosen target) and confirm
 before writing.
 
 ### 4. Remove or repurpose the original
 
-If retiring the bare slug, delete `wiki/pages/<original-slug>.md` and its `index.md`
-entry. If keeping it as the primary sense, trim it to that sense only. Add the new
-qualified pages to `wiki/index.md`.
+If retiring the bare slug, delete `wiki/pages/<original-slug>.md`. If keeping it as the
+primary sense, trim it to that sense only and bump its `updated` date. Then regenerate the
+index so the removed/added pages are reflected — do not hand-edit `index.md`:
+`python bin/generate-index.py`.
 
 ### 5. Link-resolution sweep
 

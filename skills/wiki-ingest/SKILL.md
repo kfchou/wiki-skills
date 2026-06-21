@@ -31,7 +31,7 @@ Read all content. For long sources, read in sections. Do not skip.
 Tell the user:
 - 3-5 bullet points of key takeaways
 - What entities/concepts this introduces or updates
-- Whether it contradicts anything already in the wiki (read `wiki/index.md` and relevant pages to check)
+- Whether it contradicts anything already in the wiki (regenerate the index first — `python bin/generate-index.py` — then read `wiki/index.md` and relevant pages to check)
 
 Ask: **"Anything specific you want me to emphasize or de-emphasize?"**
 
@@ -49,8 +49,11 @@ Write `wiki/pages/<slug>.md`:
 ```markdown
 ---
 title: <source title>
+category: <one of the wiki's Index Categories — e.g. Sources>
+summary: <one-line description for the index>
 tags: [<relevant tags>]
 sources: [<slug>]
+created: <today>
 updated: <today>
 ---
 
@@ -150,8 +153,11 @@ For each entity/concept touched by this source:
 ```markdown
 ---
 title: <Entity or Concept Name>
+category: <one of the wiki's Index Categories — e.g. Entities or Concepts>
+summary: <one-line description for the index>
 tags: [entity | concept]
 sources: [<this-source-slug>]
+created: <today>
 updated: <today>
 ---
 
@@ -186,14 +192,19 @@ create the page (step 6) rather than linking to a slug that resolves to nothing.
 extends the step 5c check to the links written after it. Fix any unresolved link before
 moving on — remove it or create its page.
 
-### 8. Update `wiki/index.md`
+### 8. Regenerate `wiki/index.md`
 
-Add an entry under the correct category:
+Do **not** hand-edit the index. Every page you wrote this ingest already carries
+`category`, `summary`, and `created` in its frontmatter — that is the index's source of
+truth. Regenerate it:
+
 ```
-- [[<slug>]] — <one-line summary> _(ingested <date>)_
+python bin/generate-index.py
 ```
 
-For any new entity/concept pages created, add those too.
+The new source, entity, and concept pages now appear under their categories
+automatically. If the generator warns about a page with no frontmatter or a page lands in
+`Uncategorized`, fix that page's frontmatter and rerun.
 
 ### 9. Update `wiki/overview.md`
 

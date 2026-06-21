@@ -41,9 +41,10 @@ The wiki format is remarkably similar to how the Claude Code Harness manages mem
 ```
 <wiki-root>/
 ├── SCHEMA.md        # Conventions + wiki root path (how skills find the wiki)
+├── bin/             # generate-index.py — rebuilds index.md from page frontmatter
 ├── raw/             # Immutable source documents (you manage)
 ├── wiki/
-│   ├── index.md     # Content catalog — every page, one-line summary
+│   ├── index.md     # GENERATED catalog (gitignored) — rebuilt from page frontmatter
 │   ├── log.md       # Append-only operation log
 │   ├── overview.md  # Evolving synthesis of everything known
 │   └── pages/       # All wiki pages, flat, slug-named
@@ -69,6 +70,7 @@ wiki-merge         → merge duplicate concept pages, or split an overloaded slu
 - **`wiki-lint`** writes a severity-tiered report (`🔴 errors / 🟡 warnings / 🔵 info`) to `wiki/pages/lint-<date>.md`, offers concrete fixes, and logs unconditionally.
 - **`wiki-audit`** fact-checks one page against its sources. Phase A flags uncited factual claims; Phase B dispatches one subagent per source in parallel to verify each footnote (quote citations are string-matched, `[synthesis]` citations are judged against the cited range). Writes a verdict report to `wiki/pages/audit-<page>-<date>.md` and offers concrete fixes.
 - **`wiki-update`** always shows diffs before writing, always cites the source of new information, sweeps all pages for the same stale claim, and logs unconditionally.
+- **The index is generated, not hand-maintained.** `wiki/index.md` is a gitignored runtime artifact rebuilt from each page's `category` + `summary` frontmatter by `bin/generate-index.py`. Skills regenerate it before reading and after any page change, so it never drifts from the pages — no manual entry bookkeeping, no merge conflicts.
 - **`wiki-merge`** treats the slug as a concept's identity. Merge folds a duplicate page into a survivor and rewrites every inbound `[[link]]`; split separates an overloaded slug into qualified pages (`mercury-planet` / `mercury-element`), repointing each link by meaning. Both end with a link-resolution sweep so no link is left dangling.
 
 ## Use Cases

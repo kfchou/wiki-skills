@@ -15,7 +15,10 @@ Find `SCHEMA.md` (search from cwd upward, or `~/wikis/`). If not found, tell the
 
 ### 1. Read `wiki/index.md` first
 
-Scan the full index to identify which pages are likely relevant. Do NOT answer from general knowledge — the wiki is the source of truth here, even if you think you know the answer.
+Regenerate the index so it reflects the current pages — `python bin/generate-index.py` —
+then scan the full index to identify which pages are likely relevant. Do NOT answer from
+general knowledge — the wiki is the source of truth here, even if you think you know the
+answer.
 
 ### 2. Read relevant pages
 
@@ -43,8 +46,10 @@ After answering, say:
 > "Worth saving as `wiki/pages/<suggested-slug>.md`?"
 
 If yes:
-- Write the page with frontmatter: `tags: [query, analysis]`, `sources: [all cited slugs]`
-- Add entry to `wiki/index.md` under the correct category (Analyses or similar)
+- Write the page with full frontmatter: `title`, `category: Analyses` (or the wiki's
+  equivalent), `summary` (one-line), `tags: [query, analysis]`, `sources: [all cited slugs]`,
+  `created: <today>`, `updated: <today>`
+- Regenerate the index — `python bin/generate-index.py` — do not hand-edit `index.md`
 - Append to `wiki/log.md`:
   ```
   ## [<today>] query | <question summary>

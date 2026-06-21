@@ -15,7 +15,9 @@ Find `SCHEMA.md` (search from cwd upward, or `~/wikis/`). If not found, tell the
 
 ### 1. Build the page inventory
 
-Read `wiki/index.md`, `wiki/overview.md`, and all files in `wiki/pages/`. Build a map of:
+Regenerate the index first so it reflects current page frontmatter:
+`python bin/generate-index.py`. Then read `wiki/index.md`, `wiki/overview.md`, and all
+files in `wiki/pages/`. Build a map of:
 - All existing slugs (filenames without `.md`)
 - All `[[slug]]` references found in any page
 - All `sources` listed in frontmatter
@@ -25,7 +27,7 @@ Read `wiki/index.md`, `wiki/overview.md`, and all files in `wiki/pages/`. Build 
 **🔴 Errors (must fix)**
 
 - **Broken links** — `[[slug]]` references where no corresponding `wiki/pages/<slug>.md` exists
-- **Missing frontmatter** — pages without required `title`, `tags`, `sources`, or `updated` fields
+- **Missing frontmatter** — pages without required `title`, `category`, `summary`, `tags`, `sources`, `created`, or `updated` fields. `category` and `summary` are needed for index generation; a page missing them generates an incomplete or `Uncategorized` index entry. (`overview.md` lives in `wiki/`, not `wiki/pages/`, and is exempt.)
 
 **🟡 Warnings (should fix)**
 
@@ -50,8 +52,11 @@ Write `wiki/pages/lint-<today>.md` (do not ask permission — always write this)
 ```markdown
 ---
 title: Lint Report <today>
+category: Maintenance
+summary: <N> errors, <N> warnings, <N> info
 tags: [lint, maintenance]
 sources: []
+created: <today>
 updated: <today>
 ---
 
@@ -106,7 +111,8 @@ updated: <today>
   Fix: add an `L<start>-<end>` token so wiki-audit can verify it deterministically
 ```
 
-Add the lint report to `wiki/index.md` under a Maintenance category (create it if it doesn't exist).
+The lint report carries `category: Maintenance` in its frontmatter, so regenerating the
+index files it automatically — do not hand-edit `index.md`. Run `python bin/generate-index.py`.
 
 ### 4. Offer concrete fixes
 

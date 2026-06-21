@@ -15,7 +15,7 @@ implementation plan.
 | P1 | Line-range provenance | ✅ spec + implementation plan written |
 | P2 | Cross-model adversarial review | ✅ spec + implementation plan written |
 | P3 | Concept identity | ✅ implemented (mechanical links + disambiguation + wiki-merge) |
-| P4 | Frontmatter-driven auto-generated index | ⬜ roadmap only |
+| P4 | Frontmatter-driven auto-generated index | ✅ implemented (runtime-only index + bin/generate-index.py); unblocks P5, P7 |
 | P5 | Adaptive / tiered index for scale | ⬜ roadmap only |
 | P6 | Auto-generated logs + commit conventions | ⬜ roadmap only |
 | P7 | Subdirectory / ontology structuring | ⬜ roadmap only |
