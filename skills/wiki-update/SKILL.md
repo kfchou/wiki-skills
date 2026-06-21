@@ -64,20 +64,28 @@ python bin/generate-index.py
 
 Re-read `overview.md`. If the updates shift the overall synthesis (new understanding, resolved open question, changed key claim), propose edits to overview.md using the same confirm-before-write flow.
 
-### 7. Append to `wiki/log.md`
+### 7. Record the operation
 
-Always append — do not ask permission, do not skip if `log.md` exists:
-```
-## [<today>] update | <list of updated page slugs>
-Reason: <brief description of what changed and why>
-Source: <URL or description>
-```
+Per SCHEMA's **Operation Log & Commit Convention**:
+- **Git wiki:** stage the changes and suggest a commit (default Conventional Commits
+  `docs:` for an update, plus the trailer); commit on the user's confirmation.
+  ```
+  docs: <what changed, briefly>
+
+  Wiki-Op: update
+  ```
+- **Non-git wiki:** append to `wiki/log.md` (do not skip if it exists):
+  ```
+  ## [<today>] update | <list of updated page slugs>
+  Reason: <brief description of what changed and why>
+  Source: <URL or description>
+  ```
 
 ## Common Mistakes
 
 - **Updating without citing the source** — Always include where the new information came from. This makes the wiki auditable.
 - **Skipping the downstream check** — An update that contradicts a page's content while leaving pages that link to it unchanged creates silent inconsistency.
-- **Skipping the log** — Every change must be logged. The log is append-only; if `log.md` doesn't exist, create it.
+- **Skipping the log** — Every change must be recorded: a git wiki commits it (with the `Wiki-Op:` trailer); a non-git wiki appends to `log.md`.
 - **Batch-writing without confirmation** — Show each diff individually. The user may accept some changes and reject others.
 - **Appending instead of updating** — Do not add `## [date] update` sections to page bodies. Edit the relevant section in-place, bump the `updated` frontmatter date, and log the change in `log.md`. If you find existing date-stamped sections, offer to integrate them in-place as part of the update.
 - **Inventing `[[slug]]` links in an edit** — A revision must not introduce a cross-reference to a slug that resolves to nothing. Confirm the target exists (or create it); see the Concept Identity rule in `SCHEMA.md`.

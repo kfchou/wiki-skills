@@ -125,11 +125,19 @@ For each fixable category, offer:
 
 Show the exact diff for each change before writing. Apply only after confirmation.
 
-### 5. Append to `wiki/log.md`
+### 5. Record the operation
 
-Always append — do not ask permission:
-```
-## [<today>] lint | <N errors> errors, <N warnings> warnings, <N info> info
-Report: [[lint-<today>]]
-Fixed: <list what was auto-fixed, or "none">
-```
+Per SCHEMA's **Operation Log & Commit Convention**:
+- **Git wiki:** suggest a commit (default Conventional Commits `fix:` when fixes were
+  applied, `chore:` for a report-only run, plus the trailer); commit on confirmation.
+  ```
+  fix: resolve <what lint fixed>
+
+  Wiki-Op: lint
+  ```
+- **Non-git wiki:** append to `wiki/log.md`:
+  ```
+  ## [<today>] lint | <N errors> errors, <N warnings> warnings, <N info> info
+  Report: [[lint-<today>]]
+  Fixed: <list what was auto-fixed, or "none">
+  ```

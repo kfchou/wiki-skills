@@ -50,14 +50,23 @@ If yes:
   equivalent), `summary` (one-line), `tags: [query, analysis]`, `sources: [all cited slugs]`,
   `created: <today>`, `updated: <today>`
 - Regenerate the index — `python bin/generate-index.py` — do not hand-edit `index.md`
-- Append to `wiki/log.md`:
-  ```
-  ## [<today>] query | <question summary>
-  Filed as: [[<slug>]]
-  ```
+- Record the operation (per SCHEMA's **Operation Log & Commit Convention**):
+  - **Git wiki:** suggest a commit (default `docs:` for a saved query, plus the trailer);
+    commit on confirmation.
+    ```
+    docs: add analysis — <question summary>
+
+    Wiki-Op: query
+    ```
+  - **Non-git wiki:** append to `wiki/log.md`:
+    ```
+    ## [<today>] query | <question summary>
+    Filed as: [[<slug>]]
+    ```
 
 If no:
-- Append to `wiki/log.md`:
+- **Git wiki:** nothing changed, so there is nothing to commit — the query is not logged.
+- **Non-git wiki:** append to `wiki/log.md`:
   ```
   ## [<today>] query | <question summary>
   Not filed.

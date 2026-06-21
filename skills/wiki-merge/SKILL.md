@@ -77,14 +77,23 @@ confirm every `[[slug]]` on the survivor page resolves to a real page. Fix any s
 before finishing. (This is the same inline check `wiki-ingest` runs; a merge that leaves a
 dangling link defeats its own purpose.)
 
-### 6. Update overview and log
+### 6. Update overview and record the operation
 
 If the merge changes the synthesis (e.g. a duplicated "Key Concept" becomes one), update
-`wiki/overview.md`. Append to `wiki/log.md`:
-```
-## [<today>] merge | <loser-slug> → <survivor-slug>
-Inbound links rewritten: <N> across <list of pages>
-```
+`wiki/overview.md`. Then record the operation per SCHEMA's **Operation Log & Commit
+Convention**:
+- **Git wiki:** suggest a commit (default `refactor:` for a merge, plus the trailer) and
+  commit on confirmation.
+  ```
+  refactor: merge <loser-slug> into <survivor-slug>
+
+  Wiki-Op: merge
+  ```
+- **Non-git wiki:** append to `wiki/log.md`:
+  ```
+  ## [<today>] merge | <loser-slug> → <survivor-slug>
+  Inbound links rewritten: <N> across <list of pages>
+  ```
 
 ---
 
@@ -137,13 +146,22 @@ index so the removed/added pages are reflected — do not hand-edit `index.md`:
 If the bare slug was retired, grep the whole wiki for `[[<original-slug>]]` — zero matches
 must remain. Confirm every `[[slug]]` on the new pages resolves. Fix any stragglers.
 
-### 6. Update overview and log
+### 6. Update overview and record the operation
 
-Update `wiki/overview.md` if the split changes the synthesis. Append to `wiki/log.md`:
-```
-## [<today>] split | <original-slug> → <slug-a>, <slug-b>
-Inbound links repointed: <N> across <list of pages>
-```
+Update `wiki/overview.md` if the split changes the synthesis. Then record the operation
+per SCHEMA's **Operation Log & Commit Convention**:
+- **Git wiki:** suggest a commit (default `refactor:` for a split, plus the trailer) and
+  commit on confirmation.
+  ```
+  refactor: split <original-slug> into <slug-a>, <slug-b>
+
+  Wiki-Op: split
+  ```
+- **Non-git wiki:** append to `wiki/log.md`:
+  ```
+  ## [<today>] split | <original-slug> → <slug-a>, <slug-b>
+  Inbound links repointed: <N> across <list of pages>
+  ```
 
 ---
 
@@ -157,5 +175,5 @@ Inbound links repointed: <N> across <list of pages>
   by find-and-replace. That per-link judgment is the reason split is a deliberate skill.
 - **Merging without confirmation** — Merge deletes a page and rewrites links across the
   wiki. Always show the plan and the diffs, and write only after the user confirms.
-- **Skipping the log** — Record the operation so the slug change is traceable. The log is
-  append-only.
+- **Skipping the log** — Record the operation so the slug change is traceable: a git wiki
+  commits it (with the `Wiki-Op:` trailer); a non-git wiki appends to `log.md`.

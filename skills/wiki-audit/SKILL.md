@@ -222,16 +222,26 @@ For each non-empty category, offer one at a time:
 
 Apply only after user confirmation. Show the exact diff before each write.
 
-### 6. Append to `wiki/log.md`
+### 6. Record the operation
 
-Always append — do not ask permission. In strong mode, append the cross-model result too. The `Report:` line points at the local-only (gitignored) report; that is expected.
+Per SCHEMA's **Operation Log & Commit Convention**. Note the audit *report* itself is
+gitignored (`audit-*.md`), so only page changes are committable.
+- **Git wiki:** if the audit changed any committable file — citation fixes to the page, or
+  the strong-mode `review:` frontmatter token — suggest a commit (default `fix:` when fixes
+  were applied, `chore:` for a review-token-only run, plus the trailer) and commit on
+  confirmation. A clean normal-mode audit that changed nothing has nothing to commit.
+  ```
+  fix: resolve uncited claims on <page-slug>
 
-```
-## [<today>] audit | [[<page-slug>]] — N supported, N unsupported, N partial, N uncited
-Report: audit-<page-slug>-<today>.md (local-only)
-Cross-model: <model>/<provider> — clean | N disagreements   # strong mode only
-Fixed: <list, or "none">
-```
+  Wiki-Op: audit
+  ```
+- **Non-git wiki:** append to `wiki/log.md`:
+  ```
+  ## [<today>] audit | [[<page-slug>]] — N supported, N unsupported, N partial, N uncited
+  Report: audit-<page-slug>-<today>.md (local-only)
+  Cross-model: <model>/<provider> — clean | N disagreements   # strong mode only
+  Fixed: <list, or "none">
+  ```
 
 ### 7. Report to user
 

@@ -215,17 +215,27 @@ Re-read the current overview. If this source:
 
 Update the frontmatter `updated` date.
 
-### 10. Append to `wiki/log.md`
+### 10. Record the operation
 
-```
-## [<today>] ingest | <source title>
-Pages written: <slug>
-Pages updated: <comma-separated list>
-```
+Per SCHEMA's **Operation Log & Commit Convention**:
+- **Git wiki:** stage the wiki changes and suggest a commit (subject follows the repo's
+  convention — default Conventional Commits `docs:` for an ingest — plus the trailer).
+  Commit on the user's confirmation; never auto-commit.
+  ```
+  docs: summarize <source title>
+
+  Wiki-Op: ingest
+  ```
+- **Non-git wiki:** append to `wiki/log.md`:
+  ```
+  ## [<today>] ingest | <source title>
+  Pages written: <slug>
+  Pages updated: <comma-separated list>
+  ```
 
 ## Common Mistakes
 
-- **Appending chronological updates instead of editing in-place** — Wiki pages are living documents, not journals. Do not add sections like `## April 27 update:` or `**Update:**` followed by new content. Update the relevant section in-place, bump the `updated` frontmatter date, and record what changed in `log.md`. The log is the append-only record; pages are the current truth.
+- **Appending chronological updates instead of editing in-place** — Wiki pages are living documents, not journals. Do not add sections like `## April 27 update:` or `**Update:**` followed by new content. Update the relevant section in-place, bump the `updated` frontmatter date, and record what changed in the operation log (a commit on a git wiki, or `log.md` otherwise). The log is the historical record; pages are the current truth.
 - **Skipping the backlink audit (step 7)** — A wiki's value compounds through bidirectional links. Always scan existing pages for entities this source introduces.
 - **Inventing `[[slug]]` links** — Never write a cross-reference to a slug you have not confirmed exists or are creating now. A link that resolves to nothing is a hallucinated link. Verify against the existing page set (`ls wiki/pages/`); see the Concept Identity rule in `SCHEMA.md`.
 - **Summarizing the abstract instead of synthesizing** — The Summary section should reflect your own synthesis, not a rephrased abstract.

@@ -17,7 +17,7 @@ implementation plan.
 | P3 | Concept identity | ✅ implemented (mechanical links + disambiguation + wiki-merge) |
 | P4 | Frontmatter-driven auto-generated index | ✅ implemented (runtime-only index + bin/generate-index.py); unblocks P5, P7 |
 | P5 | Adaptive / tiered index for scale | ⬜ roadmap only |
-| P6 | Auto-generated logs + commit conventions | ⬜ roadmap only |
+| P6 | Auto-generated logs + commit conventions | ✅ implemented (git history as log + bin/render-log.py; non-git log.md fallback; tests/) |
 | P7 | Subdirectory / ontology structuring | ⬜ roadmap only |
 | P8 | Ingest-time severity-graded contradiction detection | ⬜ roadmap only |
 | P9 | Pre-commit gate | ⬜ roadmap only |
