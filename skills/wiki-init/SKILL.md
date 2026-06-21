@@ -29,6 +29,7 @@ Ask:
 ```
 <wiki-root>/
 ├── SCHEMA.md         ← conventions + absolute path (how other skills find the wiki)
+├── .gitignore        ← local-only artifacts (audit reports) excluded from version control
 ├── raw/              ← immutable source documents (you add these, LLM never modifies)
 ├── wiki/
 │   ├── index.md      ← content catalog: every page, one-line summary, by category
@@ -39,6 +40,22 @@ Ask:
 ```
 
 **Critical:** `wiki/pages/` is flat. All pages live here as `<slug>.md`. No subdirectories. Slugs are lowercase, hyphen-separated.
+
+Ensure `<wiki-root>/.gitignore` excludes audit reports (if the wiki is or later becomes a
+git repo, this keeps disposable artifacts out of version control). **Do not clobber an
+existing `.gitignore`** — a reinitialized wiki, or a wiki root nested in an existing git
+repo, may already have one:
+- If `<wiki-root>/.gitignore` does not exist, create it with the block below.
+- If it exists but has no `wiki/pages/audit-*.md` line, append the block below.
+- If it already ignores `wiki/pages/audit-*.md`, leave it untouched.
+
+```
+# Audit reports are regenerated local-only artifacts (wiki-audit). The committed record
+# of an audit is the `review:` frontmatter token on the audited page, not the report.
+wiki/pages/audit-*.md
+```
+
+This is the same create-or-append discipline `wiki-audit` uses to self-heal (Task 4).
 
 ### 3. Write `SCHEMA.md`
 
@@ -130,6 +147,28 @@ Three rules for every footnote:
 [^3]: raw/scaling-laws.pdf p.7 — "loss scales as a power law in compute"
 [^4]: https://twitter.com/user/status/123 (2026-04-15) — "<tweet text>"
 ```
+
+## Cross-Model Review
+
+`wiki-audit strong` runs a second-opinion pass with a different-provider model and
+stamps the audited page with an optional `review:` frontmatter block:
+```
+review:
+  model: codex          # gemini | claude-sonnet
+  provider: openai      # google | anthropic
+  date: YYYY-MM-DD
+  status: clean         # or: disputed
+  findings: 2           # present only when status: disputed
+```
+- `status: clean` — the reviewer surfaced no disagreement with the normal audit.
+- `status: disputed` — the reviewer flagged overreach or a contradiction the normal
+  audit missed; `findings:` carries the count. The detail lives in the (local-only)
+  audit report.
+- `provider: anthropic` (the `claude-sonnet` fallback) means no different-provider CLI
+  was available, so the check is same-provider and weaker.
+
+This block is optional and is added only by `wiki-audit strong`. Pages never need it to
+be valid.
 
 ## Log Entry Format
 ## [YYYY-MM-DD] <operation> | <title>
