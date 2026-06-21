@@ -5,7 +5,7 @@ description: Use when fact-checking a single wiki page against its cited sources
 
 # Wiki Audit
 
-Verify a single wiki page against its cited sources. Two phases: detect uncited factual claims, then verify cited claims by dispatching one subagent per source in parallel.
+Verify a single wiki page against its cited sources. Two phases: detect uncited factual claims, then verify cited claims by dispatching one subagent per source in parallel. In **strong mode** (`wiki-audit strong`) a third phase adds a cross-model adversarial review: a different-provider model re-examines the same claims for overreach and contradiction, and disagreements with the normal pass become findings.
 
 ## Pre-condition
 
@@ -33,6 +33,8 @@ Three rules:
 3. Either a verbatim quote, or the [synthesis] tag plus a description of what
    the cited range supports.
 ```
+
+**Mode:** if the invocation arguments contain the word `strong` (e.g. `wiki-audit strong transformer-architecture`), enable strong mode — run Phase C (§3b) after Phase B. Otherwise run normal mode (Phases A and B only). The remaining argument token, if any, names the page.
 
 If the user did not name a page, ask which page to audit. Accept slug, filename, or absolute path. Resolve to `wiki/pages/<slug>.md`. Audit one page per run.
 
