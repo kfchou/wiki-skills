@@ -61,7 +61,8 @@ The subagent applies the SCHEMA.md "what to cite" rule: paragraph- or claim-leve
 
 For every footnote definition in the page, parse:
 - The **target** — one of `[[source-slug]]`, a path under `raw/`/`assets/`, or a URL.
-- The **locator** (§section, p.N, timestamp, URL anchor, dated post).
+- The **semantic locator** (§section, p.N, timestamp, URL anchor, dated post).
+- The **line-range** `L<start>-<end>` if present (text-addressable sources carry one).
 - Either the verbatim **quote** or the `[synthesis]` description.
 
 **Resolve each target to readable content:**
@@ -72,6 +73,25 @@ For every footnote definition in the page, parse:
 
 Any target that cannot be resolved gets verdict `🚫 source-missing`; do not dispatch a subagent for it.
 
+**Fast path — footnotes carrying a line-range (`L…`):** Do not dispatch a subagent.
+Resolve the target to its raw file and read only the cited lines (e.g. `sed -n
+'142,143p' raw/<file>` or the Read tool with that offset/limit). Then:
+
+- **Quote footnote:** string-match the verbatim quote against the text in that line
+  range, ignoring leading/trailing whitespace and collapsing internal runs of
+  whitespace to single spaces. Match → `✅ supported`. No match → `❌ unsupported`
+  (note what the lines actually say).
+- **Synthesis footnote (`[synthesis]` + `L…`):** dispatch a subagent, but give it ONLY
+  the cited line slice (not the whole source) plus the synthesis description, and apply
+  the verdict rubric below. This is the bounded-read case — far cheaper than reading the
+  full source.
+
+A footnote whose line-range cannot be read (range outside the file, file missing) gets
+`🚫 source-missing`.
+
+**Slow path — footnotes WITHOUT a line-range** (legacy citations and exempt sources:
+PDFs, transcripts, live URLs):
+
 **Group resolvable footnotes by their resolved file** (multiple footnotes against the same PDF read it once). Dispatch one subagent **per file, in parallel** using the `Agent` tool. Each subagent gets:
 - The raw source content (from `raw/`, `assets/`, or cached URL).
 - The list of footnotes against that source — for each: number, locator, and either the verbatim quote or the `[synthesis]` description.
@@ -79,8 +99,8 @@ Any target that cannot be resolved gets verdict `🚫 source-missing`; do not di
 
 Each subagent returns, per footnote, one verdict and a 1-line note:
 
-- `✅ supported` — quote string-matches the source at the cited locator, or the `[synthesis]` description honestly summarizes the cited range.
-- `❌ unsupported` — quote not found at the cited locator, or the claim is contradicted by the source.
+- `✅ supported` — quote string-matches the source at the cited locator (deterministic when an `L…` range is present), or the `[synthesis]` description honestly summarizes the cited range.
+- `❌ unsupported` — quote not found at the cited locator/line-range, or the claim is contradicted by the source.
 - `⚠️ partial` — quote is paraphrased rather than verbatim (and lacks the `[synthesis]` tag), or the synthesis description overstates the cited range.
 
 For ❌ and ⚠️, the note must include what the source actually says, so the user can decide how to fix.
