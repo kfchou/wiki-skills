@@ -109,6 +109,55 @@ For ❌ and ⚠️, the note must include what the source actually says, so the 
 
 **Why per-source, not per-footnote:** PDFs are expensive to read. One read of a 30-page paper for five footnotes beats five reads.
 
+### 3b. Phase C — cross-model adversarial review (strong mode only)
+
+Run this section ONLY when the audit was invoked as `wiki-audit strong`. In normal mode, skip it entirely and go to step 4.
+
+**1. Select a reviewer model (provider chain).** Detect an available different-provider CLI, in order:
+- `command -v codex` succeeds → use codex (OpenAI). Label: model `codex`, provider `openai`.
+- else `command -v gemini` succeeds → use gemini (Google). Label: model `gemini`, provider `google`.
+- else fall back to a Claude subagent via the `Agent` tool (Sonnet). Label: model `claude-sonnet`, provider `anthropic`. Mark every finding `same-provider — weaker signal`, and tell the user that installing codex or gemini would enable a true cross-provider check.
+
+**2. Assemble the bounded payload** — reuse Phase B's work; do NOT re-read raw sources:
+- The full target page body.
+- For each cited claim: the claim text plus the line-range excerpt Phase B already read.
+- The body of each page directly linked from the target via `[[slug]]` (direct links only — not the whole wiki).
+
+Write the payload followed by the instruction block below to a temp file, `$TMPDIR/wiki-review-<page-slug>.md`.
+
+**3. Instruction block** (include verbatim at the top of the payload file):
+```
+You are an adversarial reviewer. Given a wiki page, the source excerpts its claims
+cite, and the bodies of its directly-linked neighbor pages, find ONLY these problems
+and return them as a JSON array — nothing else. Do not restate claims that are fine.
+Finding types:
+- "overreach": a claim generalizes beyond what its cited excerpt supports.
+- "internal-contradiction": two claims on this page conflict.
+- "cross-page-contradiction": a claim conflicts with a directly-linked neighbor page.
+Each finding is an object: {"type": "...", "where": "<line / footnote / page ref>",
+"detail": "<one sentence>"}. Return [] if you find nothing.
+```
+
+**4. Invoke the reviewer** in non-interactive mode:
+- codex:  `codex exec "$(cat "$TMPDIR/wiki-review-<page-slug>.md")"`
+- gemini: `gemini -p "$(cat "$TMPDIR/wiki-review-<page-slug>.md")"`
+- subagent fallback: dispatch one `Agent` whose prompt is the payload file's contents.
+
+If a CLI call errors, check its non-interactive usage (`codex exec --help` / `gemini --help`) and retry once; if it still fails, fall through to the subagent path. Parse the reviewer's reply as the JSON array of findings (tolerate surrounding prose — extract the array).
+
+**5. Filter to disagreements.** Keep only findings that Phase A/B did NOT already flag: a claim Phase B rated `✅`/`⚠️` that the reviewer calls `overreach` is a disagreement; a contradiction neither phase raised is a disagreement. Discard any reviewer finding that merely repeats an existing Phase A/B verdict. The surviving list is the Phase C findings.
+
+**6. Stamp the `review:` frontmatter** on the AUDITED page (not the report). This is audit metadata — write it automatically, like the report; no content of the page changes. Add or replace a `review:` block in the page frontmatter:
+```
+review:
+  model: codex          # gemini | claude-sonnet, per the chain above
+  provider: openai      # google | anthropic
+  date: <today>
+  status: disputed      # `clean` if step 5 left zero disagreements, else `disputed`
+  findings: 2           # the disagreement count; OMIT this line when status: clean
+```
+Carry the Phase C findings into step 4's report.
+
 ### 4. Write the audit report
 
 Always write — do not ask permission. Path: `wiki/pages/audit-<page-slug>-<today>.md`.
