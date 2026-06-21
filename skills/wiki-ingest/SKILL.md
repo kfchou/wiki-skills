@@ -192,6 +192,48 @@ create the page (step 6) rather than linking to a slug that resolves to nothing.
 extends the step 5c check to the links written after it. Fix any unresolved link before
 moving on — remove it or create its page.
 
+### 7b. Contradiction check — do not skip
+
+Now that every page this ingest touched is written and you have its neighbors in context,
+check for contradictions **before** committing. Read the **Contradiction Check** section in
+`SCHEMA.md` for the full convention. This is a gate, not an annotation: a clean ingest
+leaves no contradiction metadata on any page.
+
+**Scope — what to compare (do NOT re-read the whole wiki):**
+- each page you wrote/edited against itself (internal contradictions), and
+- each page you wrote/edited against the pages you already read this ingest — the
+  entity/concept pages from step 6 and the neighbor pages from the step 7 backlink audit.
+
+A conflict with some distant page you never opened is out of scope here — the periodic
+`wiki-lint` sweep is the backstop for that.
+
+**Classify each contradiction you find:**
+
+1. **Blocking** — a real factual conflict on the same entity under the same scope:
+   incompatible dates, counts, names, or mutually-exclusive claims (e.g. the new source page
+   says a model launched in 2024 but `[[that-model]]` already says 2023). For each blocking
+   contradiction, write a single line into the affected page's frontmatter — the page you
+   touched that carries the *newer* claim:
+   ```yaml
+   contradiction-check: failed — launch year conflicts with [[that-model]] (2024 vs 2023)
+   ```
+   Use `internal` in place of the `[[slug]]` for a within-page conflict. Then **stop — do
+   not proceed to the commit step (step 10).** Surface the conflict (both claims, both
+   locations) and offer the user these resolutions:
+   - correct the newly-written page,
+   - correct the counterpart page,
+   - reconcile both with a scope qualifier,
+   - or confirm it is not actually a conflict (it was a soft tension — see below).
+
+   When a conflict is resolved, **remove the `contradiction-check` line** from the page.
+   Only once no `contradiction-check: failed` line remains on any touched page do you
+   continue.
+
+2. **Soft** — a tension that is not a true conflict: differing emphasis, values within
+   plausible version/measurement variance, or claims that hold under different scope. Do
+   **not** write anything to any page and do **not** block. Note it for the step 11 summary
+   so the user can act if they wish; the periodic `wiki-lint` sweep is the backstop.
+
 ### 8. Regenerate `wiki/index.md`
 
 Do **not** hand-edit the index. Every page you wrote this ingest already carries
@@ -216,6 +258,10 @@ Re-read the current overview. If this source:
 Update the frontmatter `updated` date.
 
 ### 10. Record the operation
+
+**Gate first:** do not suggest a commit while any page touched this ingest still carries a
+`contradiction-check: failed` line (step 7b). Resolve the blocking contradiction and remove
+the line first — committed pages are always clean.
 
 Per SCHEMA's **Operation Log & Commit Convention**:
 - **Git wiki:** stage the wiki changes and suggest a commit (subject follows the repo's
@@ -246,3 +292,4 @@ Per SCHEMA's **Operation Log & Commit Convention**:
 - Entity/concept pages created or updated: <list>
 - Pages that received backlinks: <list>
 - Index and overview updated
+- Soft tensions noted (step 7b): <list any non-blocking tensions, or "none"> — not recorded on any page; act on them if you want

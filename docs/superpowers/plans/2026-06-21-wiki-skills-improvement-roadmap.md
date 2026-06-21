@@ -19,7 +19,7 @@ implementation plan.
 | P5 | Adaptive / tiered index for scale | ⬜ roadmap only |
 | P6 | Auto-generated logs + commit conventions | ✅ implemented (git history as log + bin/render-log.py; non-git log.md fallback; tests/) |
 | P7 | Subdirectory / ontology structuring | ⬜ roadmap only |
-| P8 | Ingest-time severity-graded contradiction detection | ⬜ roadmap only |
+| P8 | Ingest-time contradiction detection | ✅ implemented (gate, not annotation — transient `contradiction-check: failed` flag in wiki-ingest 7b; committed pages stay clean); unblocks P9 |
 | P9 | Pre-commit gate | ⬜ roadmap only |
 | P10 | Periodic lint backstop | ⬜ roadmap only |
 
@@ -30,7 +30,7 @@ P1 ──► P2          (provenance enables cheaper/located cross-model review)
 P1 ──► P9          (line-located claims feed the gate's machine-readable status)
 P4 ──► P5          (auto-index must exist before it can be tiered/budgeted)
 P4 ──► P7          (index generation shapes how subdirectories are discovered)
-P8 ──► P9 ──► P10  (severity tokens → pre-commit block → periodic backstop)
+P8 ──► P9 ──► P10  (contradiction-check flag → pre-commit block → periodic backstop)
 ```
 
 Independent roots: **P1**, **P3**, **P4**, **P6**, **P8**. Recommended build order follows
@@ -218,11 +218,14 @@ Status: Unresolved — flagged for user review
 contradiction — fast, no LLM, pure script.
 
 **Approach sketch:** A git pre-commit hook runs a small Python script that scans staged files'
-frontmatter for `Status: Unresolved` and exits non-zero if any are found, naming them. Ships
-as an installable hook plus setup guidance.
+frontmatter for the literal `contradiction-check: failed` flag (written by P8's wiki-ingest
+step 7b) and exits non-zero if any are found, naming them. Ships as an installable hook plus
+setup guidance. Note: P8 already makes the *skill* refuse to commit while a flag is present,
+so the hook is the deterministic backstop for the case where an agent or human stages a
+flagged page anyway — on a healthy repo it never fires.
 
-**Depends on:** P8 (the severity/status tokens it scans for) — and the git-process work in P6
-is a natural companion.
+**Depends on:** P8 (the `contradiction-check: failed` flag it scans for) — and the
+git-process work in P6 is a natural companion.
 
 **Touch points:** a new `hooks/` or script directory, install instructions (likely in
 `wiki-init` and/or README), `SCHEMA.md` reference.
@@ -241,11 +244,16 @@ is a natural companion.
 flagged as contradicting — not the entire repository — so it stops nuking the context window
 as the wiki grows.
 
-**Approach sketch:** `wiki-lint`'s contradiction check becomes a backstop: it reads pages
-carrying a contradiction `Status:` token (from P8) plus their counterparts, rather than
-re-reading everything. If P8/P9 are working, little reaches this stage.
+**Approach sketch:** `wiki-lint`'s contradiction check becomes a backstop for the conflicts
+P8 does *not* catch — soft tensions (P8 surfaces but never records) and conflicts with
+distant pages outside an ingest's touched neighborhood. **Note:** P8 shipped as a gate that
+persists nothing (committed pages are always clean), so the original "read only pages
+carrying a `Status:` token" premise no longer holds — there are no persisted tokens to read.
+This plan needs a re-brainstorm: the backstop must rescope around what P8 leaves behind
+(neighbor-scoped + soft), not around persisted severity tokens.
 
-**Depends on:** P8 (consumes its tokens), P9 (gate keeps the flagged set small).
+**Depends on:** P8 (defines what it must back-stop), P9 (gate keeps hard conflicts out of
+commits).
 
 **Touch points:** `skills/wiki-lint/SKILL.md` (contradiction check section).
 
