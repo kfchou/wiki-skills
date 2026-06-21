@@ -106,13 +106,21 @@ Find (line ~41):
 Insert immediately AFTER it:
 ```
 
-Write `<wiki-root>/.gitignore` (if the wiki is or later becomes a git repo, this keeps
-disposable artifacts out of version control):
+Ensure `<wiki-root>/.gitignore` excludes audit reports (if the wiki is or later becomes a
+git repo, this keeps disposable artifacts out of version control). **Do not clobber an
+existing `.gitignore`** — a reinitialized wiki, or a wiki root nested in an existing git
+repo, may already have one:
+- If `<wiki-root>/.gitignore` does not exist, create it with the block below.
+- If it exists but has no `wiki/pages/audit-*.md` line, append the block below.
+- If it already ignores `wiki/pages/audit-*.md`, leave it untouched.
+
 \```
 # Audit reports are regenerated local-only artifacts (wiki-audit). The committed record
 # of an audit is the `review:` frontmatter token on the audited page, not the report.
 wiki/pages/audit-*.md
 \```
+
+This is the same create-or-append discipline `wiki-audit` uses to self-heal (Task 4).
 ```
 
 - [ ] **Step 4: Document the `review:` token in the `SCHEMA.md` template**
