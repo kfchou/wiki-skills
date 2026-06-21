@@ -98,6 +98,22 @@ Synthesis: [^N]: <target> <locator> [synthesis] — <what supports the claim>
 For the source being ingested, use `[[<this-source-slug>]]` — `wiki-ingest`
 is creating that page now, so the target exists by the time the page is read.
 
+**Line-range provenance — required for text-addressable sources.** If the raw file
+you are citing is markdown, plaintext, code, or cached HTML, every footnote to it must
+carry a line-range token after the semantic locator: `L<start>-<end>` (or `L<n>` for a
+single line). As you read the raw file, note the line numbers of the passage you are
+citing — for a quote, the lines the quote is taken from; for a `[synthesis]` claim, the
+block of lines being summarized. Example:
+
+```
+[^1]: [[<this-source-slug>]] §3.2 L142-143 — "We employ h = 8 parallel attention layers"
+[^2]: [[<this-source-slug>]] §3.2-5.3 [synthesis] L138-202 — encoder/decoder + attention describe the architecture
+```
+
+Sources WITHOUT stable line numbers — PDFs, transcripts, and live URLs with no local
+cached copy — are exempt: keep the semantic locator (`p.N`, `[HH:MM:SS]`, URL anchor)
+and omit `L…`.
+
 If you cannot produce either citation kind for a claim, you do not have a
 citation. Find one, weaken the claim ("the paper suggests..."), or drop it.
 
@@ -106,9 +122,17 @@ sequentially in order of first reference.
 
 ### 5c. Self-check before continuing
 
-Re-read the draft once. Scan for unfootnoted factual claims — this is the most
-common failure mode in long ingest sessions. For each, add a footnote or revise
-the wording. Only then move on to entity pages.
+Re-read the draft once. Two passes:
+
+1. **Unfootnoted claims** — scan for factual claims with no footnote (the most common
+   failure mode in long ingest sessions). For each, add a footnote or revise the wording.
+2. **Missing line-ranges** — for every footnote whose target is a text-addressable raw
+   file (markdown / plaintext / code / cached HTML), confirm an `L…` token is present.
+   A text-source footnote with no line-range is incomplete: go back to the raw file,
+   find the lines, and add the token. Exempt sources (PDF / transcript / live URL) are
+   fine without one.
+
+Only when both passes are clean do you move on to entity pages.
 
 ### 6. Update entity and concept pages
 
