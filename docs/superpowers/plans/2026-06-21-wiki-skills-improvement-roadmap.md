@@ -20,14 +20,13 @@ implementation plan.
 | P6 | Auto-generated logs + commit conventions | ✅ implemented (git history as log + bin/render-log.py; non-git log.md fallback; tests/) |
 | P7 | Subdirectory / ontology structuring | ⬜ roadmap only |
 | P8 | Ingest-time contradiction detection | ✅ implemented (gate, not annotation — transient `contradiction-check: failed` flag in wiki-ingest 7b; committed pages stay clean); unblocks P9 |
-| P9 | Pre-commit gate | ⬜ roadmap only |
+| P9 | Pre-commit gate | ✅ implemented (bin/check-contradictions.py + tracked bin/hooks/pre-commit via core.hooksPath; blocks staged pages carrying the flag; tests/) |
 | P10 | Periodic lint backstop | ⬜ roadmap only |
 
 ## Dependency graph
 
 ```
 P1 ──► P2          (provenance enables cheaper/located cross-model review)
-P1 ──► P9          (line-located claims feed the gate's machine-readable status)
 P4 ──► P5          (auto-index must exist before it can be tiered/budgeted)
 P4 ──► P7          (index generation shapes how subdirectories are discovered)
 P8 ──► P9 ──► P10  (contradiction-check flag → pre-commit block → periodic backstop)

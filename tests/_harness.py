@@ -15,6 +15,7 @@ SKILL = REPO_ROOT / "skills" / "wiki-init" / "SKILL.md"
 _SIGNATURES = {
     "generate-index": "Generate wiki/index.md from page frontmatter",
     "render-log": "Render the wiki operation log from git history",
+    "check-contradictions": "Block commits that stage a wiki page still flagged",
 }
 
 

@@ -234,7 +234,21 @@ commits. It is a **gate, not an annotation**: every page that lands in git is cl
 - **Soft tensions are surfaced, not recorded** — mentioned in the ingest summary so you can
   act if you wish, but never persisted and never blocking.
 
-This flag is also what a deterministic pre-commit gate scans staged files for.
+This flag is also what the **Pre-commit Gate** below scans staged files for.
+
+## Pre-commit Gate
+
+On a git wiki, `bin/hooks/pre-commit` (installed by `wiki-init` via
+`git config core.hooksPath bin/hooks`) runs `bin/check-contradictions.py` before every
+commit. The checker scans the **staged** content of `wiki/pages/*.md`, frontmatter only,
+and **blocks the commit** if any page still carries a `contradiction-check: failed` flag —
+deterministic, no LLM. It is the backstop to the skill-level hold in `wiki-ingest` step 7b;
+on a healthy wiki it never fires.
+
+- **Resolve** the contradiction and remove the `contradiction-check:` line, then re-stage.
+- **Fresh clone:** `core.hooksPath` is repo-local config and is not cloned — re-run
+  `git config core.hooksPath bin/hooks` once after cloning.
+- **Override** an intentional commit with `git commit --no-verify`.
 
 ## Operation Log & Commit Convention
 Operations: init, ingest, query, update, lint, audit, merge, split
@@ -293,6 +307,7 @@ from page frontmatter by `bin/generate-index.py`:
 - All pages live flat in wiki/pages/ — no subdirectories
 - overview.md reflects the current synthesis across all sources
 - contradiction check: ingest gates on blocking contradictions in touched pages via a transient `contradiction-check: failed` flag, removed before commit — committed pages are always clean (see Contradiction Check)
+- pre-commit gate: git wikis run bin/hooks/pre-commit (via core.hooksPath) → bin/check-contradictions.py, which blocks any commit staging a page that still carries the flag (see Pre-commit Gate); re-run `git config core.hooksPath bin/hooks` after a fresh clone
 <if codebase domain>
 - README boundary: wiki pages must not duplicate README content. Extract structural signals; link to the README for operational content (setup, contributing, running). When ingesting any README, also evaluate it for gaps and suggest edits.
 </if>
@@ -300,8 +315,8 @@ from page frontmatter by `bin/generate-index.py`:
 
 ### 4. Write the `bin/` helper scripts and generate the index
 
-The wiki ships two stdlib-only helper scripts (no dependencies). Write each to
-`<wiki-root>/bin/` **exactly** as below.
+The wiki ships three stdlib-only helper scripts (no dependencies) plus a tracked git hook.
+Write each to `<wiki-root>/bin/` **exactly** as below.
 
 **`bin/generate-index.py`** — `wiki/index.md` is not hand-written; it is generated from
 page frontmatter so it can never drift from reality. After writing it, run it once
@@ -509,14 +524,127 @@ if __name__ == "__main__":
     main()
 ```
 
+**`bin/check-contradictions.py`** — the pre-commit gate (see the **Pre-commit Gate** and
+**Contradiction Check** sections in `SCHEMA.md`). It blocks a commit that stages a
+`wiki/pages/` file still carrying P8's `contradiction-check: failed` flag. Deterministic,
+no LLM. Harmless on a non-git wiki — it no-ops.
+
+```python
+#!/usr/bin/env python3
+"""Block commits that stage a wiki page still flagged with a contradiction.
+
+wiki-ingest writes `contradiction-check: failed` into a page's frontmatter when it finds a
+blocking contradiction, and removes it once resolved. This pre-commit gate is the
+deterministic backstop: it scans the *staged* content of wiki/pages/*.md and, if any still
+carries that flag in its frontmatter, blocks the commit. No LLM, stdlib only.
+
+Invoked from bin/hooks/pre-commit. Override an intentional commit with `git commit --no-verify`.
+"""
+import subprocess
+import sys
+from pathlib import Path
+
+WIKI_ROOT = Path(__file__).resolve().parent.parent
+FLAG_KEY = "contradiction-check"
+
+
+def git(*args):
+    result = subprocess.run(
+        ["git", "-C", str(WIKI_ROOT), *args],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip())
+    return result.stdout
+
+
+def staged_pages():
+    """Yield staged (added/copied/modified) wiki/pages/*.md paths, excluding audit reports."""
+    out = git("diff", "--cached", "--name-only", "--diff-filter=ACM")
+    for path in out.splitlines():
+        path = path.strip()
+        if (path.startswith("wiki/pages/") and path.endswith(".md")
+                and not Path(path).name.startswith("audit-")):
+            yield path
+
+
+def frontmatter_flag(text):
+    """Return the flag's reason if the frontmatter carries `contradiction-check: failed`.
+
+    Parses only the leading `---` ... `---` block, so a mention of the token in the page
+    body (or any prose) never trips the gate. Returns None when clean or unterminated.
+    """
+    if not text.startswith("---"):
+        return None
+    lines = text.splitlines()
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if end is None:
+        return None
+    for line in lines[1:end]:
+        key, _, value = line.partition(":")
+        if key.strip() == FLAG_KEY and value.strip().lower().startswith("failed"):
+            return value.strip()
+    return None
+
+
+def main():
+    try:
+        git("rev-parse", "--is-inside-work-tree")
+    except RuntimeError:
+        return  # not a git repo — nothing to gate
+
+    flagged = []
+    for path in staged_pages():
+        try:
+            staged = git("show", f":{path}")  # the staged blob, not the working tree
+        except RuntimeError:
+            continue
+        reason = frontmatter_flag(staged)
+        if reason is not None:
+            flagged.append((path, reason))
+
+    if not flagged:
+        return
+
+    print("commit blocked — unresolved contradiction flag in staged page(s):\n",
+          file=sys.stderr)
+    for path, reason in flagged:
+        print(f"  {path}\n    {reason}", file=sys.stderr)
+    print("\nResolve the contradiction and remove the `contradiction-check:` line "
+          "(see wiki-ingest step 7b), then re-stage.", file=sys.stderr)
+    print("To commit anyway: git commit --no-verify", file=sys.stderr)
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+**`bin/hooks/pre-commit`** — the tracked git hook that runs the checker via `uv run` (so an
+interpreter is guaranteed). Make it executable (`chmod +x`); it is wired up in step 5.
+
+```sh
+#!/bin/sh
+# Wiki pre-commit gate (P9): block commits that stage a page still flagged with an
+# unresolved contradiction. See bin/check-contradictions.py. Override: git commit --no-verify.
+exec uv run "$(git rev-parse --show-toplevel)/bin/check-contradictions.py"
+```
+
 ### 5. Set up the operation log
 
 How operations are logged depends on whether the wiki is a git repo. **Offer to run
 `git init`** if it isn't one already — the git-history log is the better path.
 
 - **Git repo:** the git history *is* the operation log (see SCHEMA's **Operation Log &
-  Commit Convention**). Do **not** create `log.md`. Suggest the initial commit and make
-  it on the user's confirmation:
+  Commit Convention**). Do **not** create `log.md`. First install the **pre-commit gate**
+  (P9): make the hook executable and point git at the tracked hooks directory —
+  ```
+  chmod +x bin/hooks/pre-commit
+  git config core.hooksPath bin/hooks
+  ```
+  The hook is tracked (committed below), but `core.hooksPath` is repo-local config that does
+  **not** survive a fresh clone — tell the user to re-run the `git config` line after
+  cloning. Then suggest the initial commit and make it on the user's confirmation:
   ```
   chore: initialize <domain> wiki
 
