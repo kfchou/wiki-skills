@@ -32,6 +32,7 @@ The wiki format is remarkably similar to how the Claude Code Harness manages mem
 | `wiki-lint` | Health audit: contradictions, orphans, broken links, coverage gaps |
 | `wiki-update` | Revise existing pages when knowledge changes |
 | `wiki-audit` | Per-page citation audit: verify every footnote against its source, flag uncited claims |
+| `wiki-merge` | Consolidate two pages that are the same concept (merge), or split one overloaded slug into qualified pages |
 
 ## How It Works
 
@@ -58,6 +59,7 @@ wiki-query         → ask questions; save good answers back as pages
 wiki-audit         → fact-check a single page against its sources
 wiki-lint          → periodic health check (every 5-10 ingests)
 wiki-update        → revise pages when knowledge changes
+wiki-merge         → merge duplicate concept pages, or split an overloaded slug
 ```
 
 ### Key Behaviors
@@ -67,6 +69,7 @@ wiki-update        → revise pages when knowledge changes
 - **`wiki-lint`** writes a severity-tiered report (`🔴 errors / 🟡 warnings / 🔵 info`) to `wiki/pages/lint-<date>.md`, offers concrete fixes, and logs unconditionally.
 - **`wiki-audit`** fact-checks one page against its sources. Phase A flags uncited factual claims; Phase B dispatches one subagent per source in parallel to verify each footnote (quote citations are string-matched, `[synthesis]` citations are judged against the cited range). Writes a verdict report to `wiki/pages/audit-<page>-<date>.md` and offers concrete fixes.
 - **`wiki-update`** always shows diffs before writing, always cites the source of new information, sweeps all pages for the same stale claim, and logs unconditionally.
+- **`wiki-merge`** treats the slug as a concept's identity. Merge folds a duplicate page into a survivor and rewrites every inbound `[[link]]`; split separates an overloaded slug into qualified pages (`mercury-planet` / `mercury-element`), repointing each link by meaning. Both end with a link-resolution sweep so no link is left dangling.
 
 ## Use Cases
 

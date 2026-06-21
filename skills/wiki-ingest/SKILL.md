@@ -122,7 +122,7 @@ sequentially in order of first reference.
 
 ### 5c. Self-check before continuing
 
-Re-read the draft once. Two passes:
+Re-read the draft once. Three passes:
 
 1. **Unfootnoted claims** — scan for factual claims with no footnote (the most common
    failure mode in long ingest sessions). For each, add a footnote or revise the wording.
@@ -131,8 +131,14 @@ Re-read the draft once. Two passes:
    A text-source footnote with no line-range is incomplete: go back to the raw file,
    find the lines, and add the token. Exempt sources (PDF / transcript / live URL) are
    fine without one.
+3. **Link resolution** — collect every `[[slug]]` you wrote in this page and confirm
+   each resolves to an existing `wiki/pages/<slug>.md` or to a page you are creating in
+   this same ingest. See the **Concept Identity** rule in `SCHEMA.md`. Any `[[slug]]`
+   that resolves to neither is a hallucinated link: remove it, or create the page it
+   points to. This is the inline version of the broken-link check `wiki-lint` runs
+   wiki-wide — catching it now keeps the link graph trustworthy by construction.
 
-Only when both passes are clean do you move on to entity pages.
+Only when all three passes are clean do you move on to entity pages.
 
 ### 6. Update entity and concept pages
 
@@ -170,6 +176,16 @@ Scan ALL existing pages in `wiki/pages/` for any that mention this source's enti
 
 This is the step most commonly skipped. A compounding wiki's value comes from bidirectional links.
 
+**Before adding each `[[slug]]`, apply the Concept Identity rule:** the target must
+resolve to a real page. When you mention an entity that *should* have a page but doesn't,
+create the page (step 6) rather than linking to a slug that resolves to nothing.
+
+**Final link-resolution sweep.** Once every page this ingest touched is written
+(summary, entity/concept pages, backlinks), collect all `[[slug]]` references across
+*those* pages and confirm each resolves to an existing `wiki/pages/<slug>.md`. This
+extends the step 5c check to the links written after it. Fix any unresolved link before
+moving on — remove it or create its page.
+
 ### 8. Update `wiki/index.md`
 
 Add an entry under the correct category:
@@ -200,6 +216,7 @@ Pages updated: <comma-separated list>
 
 - **Appending chronological updates instead of editing in-place** — Wiki pages are living documents, not journals. Do not add sections like `## April 27 update:` or `**Update:**` followed by new content. Update the relevant section in-place, bump the `updated` frontmatter date, and record what changed in `log.md`. The log is the append-only record; pages are the current truth.
 - **Skipping the backlink audit (step 7)** — A wiki's value compounds through bidirectional links. Always scan existing pages for entities this source introduces.
+- **Inventing `[[slug]]` links** — Never write a cross-reference to a slug you have not confirmed exists or are creating now. A link that resolves to nothing is a hallucinated link. Verify against the existing page set (`ls wiki/pages/`); see the Concept Identity rule in `SCHEMA.md`.
 - **Summarizing the abstract instead of synthesizing** — The Summary section should reflect your own synthesis, not a rephrased abstract.
 
 ### 11. Report to user

@@ -31,6 +31,11 @@ Read the current content in full. Propose the change:
 
 **Always include Source.** An edit without a source citation creates untraceability — future you won't know why the change was made.
 
+**If a proposed edit introduces a new `[[slug]]`,** the target must resolve to an
+existing `wiki/pages/<slug>.md` (or a page being created in this operation) before you
+write it — see the Concept Identity rule in `SCHEMA.md`. Never edit in a link to a slug
+you have not confirmed.
+
 Ask for confirmation before writing each page. Do not batch-apply changes without per-page confirmation.
 
 ### 3. Check for downstream effects
@@ -69,3 +74,4 @@ Source: <URL or description>
 - **Skipping the log** — Every change must be logged. The log is append-only; if `log.md` doesn't exist, create it.
 - **Batch-writing without confirmation** — Show each diff individually. The user may accept some changes and reject others.
 - **Appending instead of updating** — Do not add `## [date] update` sections to page bodies. Edit the relevant section in-place, bump the `updated` frontmatter date, and log the change in `log.md`. If you find existing date-stamped sections, offer to integrate them in-place as part of the update.
+- **Inventing `[[slug]]` links in an edit** — A revision must not introduce a cross-reference to a slug that resolves to nothing. Confirm the target exists (or create it); see the Concept Identity rule in `SCHEMA.md`.

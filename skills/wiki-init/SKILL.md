@@ -81,6 +81,30 @@ updated: YYYY-MM-DD
 Use `[[slug]]` where slug = filename without `.md`.
 Example: `[[transformer-architecture]]` → `wiki/pages/transformer-architecture.md`
 
+## Concept Identity
+
+The slug **is** the concept's identity — there is no separate id. A concept is the
+page at `wiki/pages/<slug>.md`; everything that links to it uses `[[slug]]`. This only
+works if the link graph is trustworthy, so two rules hold everywhere links are written:
+
+1. **Links are verified, never invented.** Before writing any `[[slug]]`, the slug must
+   resolve to an existing `wiki/pages/<slug>.md` **or** to a page being created in the
+   same operation. List the existing page set first (`ls wiki/pages/`); never emit a
+   link to a slug you have not confirmed. A `[[slug]]` that resolves to nothing is a
+   hallucinated link — the failure this discipline exists to prevent.
+
+2. **Homonyms get qualified slugs.** When a new concept collides with an existing slug
+   for a *different* sense, qualify both with a discriminator rather than overloading
+   one page:
+   - `mercury-planet` / `mercury-element` / `mercury-mythology`
+   - `transformer-ml` / `transformer-electrical`
+
+   Pick the narrowest discriminator that disambiguates. `wiki-lint` warns when slugs
+   sharing a base token look like an unintended collision.
+
+Consolidating two pages that turn out to be the same concept (merge), or separating one
+overloaded page into qualified pages (split), is the job of the `wiki-merge` skill.
+
 ## Citations
 
 Cite every non-common-knowledge factual claim. "Common knowledge" = uncontroversial,
