@@ -21,7 +21,7 @@ implementation plan.
 | P7 | Subdirectory / ontology structuring | ⬜ roadmap only |
 | P8 | Ingest-time contradiction detection | ✅ implemented (gate, not annotation — transient `contradiction-check: failed` flag in wiki-ingest 7b; committed pages stay clean); unblocks P9 |
 | P9 | Pre-commit gate | ✅ implemented (bin/check-contradictions.py + tracked bin/hooks/pre-commit via core.hooksPath; blocks staged pages carrying the flag; tests/) |
-| P10 | Periodic lint backstop | ⬜ roadmap only |
+| P10 | Periodic lint backstop | ♻️ superseded — reframed as *scoped wiki-lint* (deterministic script + tag-cluster subagents); see `specs/2026-06-21-wiki-lint-subagent-scoping-design.md` |
 
 ## Dependency graph
 
@@ -256,10 +256,16 @@ commits).
 
 **Touch points:** `skills/wiki-lint/SKILL.md` (contradiction check section).
 
-**Open questions:**
-- Does the full-wiki contradiction sweep disappear entirely, or remain as an explicit
-  opt-in "deep" mode?
-- How are stale soft/scope flags aged out / re-reviewed?
+**Resolution (2026-06-21):** superseded. The "read pages carrying a persisted severity
+token" premise died with P8 (which persists nothing). The re-brainstorm reframed the whole
+problem as **scoped wiki-lint**: the deterministic checks move to a two-mode
+`bin/lint-mechanical.py` (full-wiki JSON sweep + `--staged` pre-commit gate), and
+contradiction / missing-xref / merge detection becomes **tag-cluster subagents** whose page
+bodies never enter the main context — approach A (tag clustering) now, with a seam to
+claim-digest map-reduce (approach C) later. The whole-wiki contradiction sweep does *not*
+remain as a deep mode; cluster-scoped passes accumulate coverage across periodic runs.
+See `specs/2026-06-21-wiki-lint-subagent-scoping-design.md` (implemented). Original open
+questions are obsolete: there are no persisted soft/scope flags to age out.
 
 ---
 

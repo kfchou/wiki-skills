@@ -23,8 +23,12 @@ def install_script(name, wiki_root):
 
 
 def write_page(wiki_root, slug, *, title=None, category=None, summary=None,
-               created=None, body="body"):
-    """Write a wiki page with the given frontmatter fields (omitting any left None)."""
+               created=None, tags=None, sources=None, updated="2026-06-21", body="body"):
+    """Write a wiki page with the given frontmatter fields (omitting any left None).
+
+    `tags` and `sources` accept a list and are rendered as an inline `[a, b]` list.
+    `updated` defaults to a fixed date; pass an older one to exercise stale-date checks.
+    """
     fm = ["---"]
     if title is not None:
         fm.append(f"title: {title}")
@@ -32,9 +36,14 @@ def write_page(wiki_root, slug, *, title=None, category=None, summary=None,
         fm.append(f"category: {category}")
     if summary is not None:
         fm.append(f"summary: {summary}")
+    if tags is not None:
+        fm.append(f"tags: [{', '.join(tags)}]")
+    if sources is not None:
+        fm.append(f"sources: [{', '.join(sources)}]")
     if created is not None:
         fm.append(f"created: {created}")
-    fm.append("updated: 2026-06-21")
+    if updated is not None:
+        fm.append(f"updated: {updated}")
     fm.append("---")
     page = Path(wiki_root) / "wiki" / "pages" / f"{slug}.md"
     page.parent.mkdir(parents=True, exist_ok=True)

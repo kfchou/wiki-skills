@@ -34,7 +34,8 @@ Ask:
 │   ├── generate-index.py  ← regenerates wiki/index.md from page frontmatter (stdlib only)
 │   ├── render-log.py      ← renders the operation log from git history (stdlib only)
 │   ├── check-contradictions.py ← pre-commit gate: blocks staged pages flagged as contradicting
-│   └── hooks/pre-commit   ← tracked git hook that runs the checker (wired via core.hooksPath)
+│   ├── lint-mechanical.py ← deterministic lint checks; full mode (JSON for wiki-lint) + --staged gate
+│   └── hooks/pre-commit   ← tracked git hook chaining both gates (wired via core.hooksPath)
 ├── raw/              ← immutable source documents (you add these, LLM never modifies)
 ├── wiki/
 │   ├── index.md      ← GENERATED catalog (gitignored) — never hand-edit; run bin/generate-index.py
@@ -241,13 +242,19 @@ This flag is also what the **Pre-commit Gate** below scans staged files for.
 ## Pre-commit Gate
 
 On a git wiki, `bin/hooks/pre-commit` (installed by `wiki-init` via
-`git config core.hooksPath bin/hooks`) runs `bin/check-contradictions.py` before every
-commit. The checker scans the **staged** content of `wiki/pages/*.md`, frontmatter only,
-and **blocks the commit** if any page still carries a `contradiction-check: failed` flag —
-deterministic, no LLM. It is the backstop to the skill-level hold in `wiki-ingest` step 7b;
-on a healthy wiki it never fires.
+`git config core.hooksPath bin/hooks`) runs **two** deterministic gates before every commit —
+no LLM:
 
-- **Resolve** the contradiction and remove the `contradiction-check:` line, then re-stage.
+1. **`bin/check-contradictions.py`** — scans the **staged** content of `wiki/pages/*.md`,
+   frontmatter only, and **blocks the commit** if any page still carries a
+   `contradiction-check: failed` flag. Backstop to the skill-level hold in `wiki-ingest`
+   step 7b; on a healthy wiki it never fires. Resolve the contradiction and remove the
+   `contradiction-check:` line, then re-stage.
+2. **`bin/lint-mechanical.py --staged`** — scans the staged pages for **structural**
+   problems and **blocks the commit** on any: missing required frontmatter, a broken
+   `[[link]]`, or a slug collision (a bare slug clashing with a qualified one). Fix the page
+   and re-stage.
+
 - **Fresh clone:** `core.hooksPath` is repo-local config and is not cloned — re-run
   `git config core.hooksPath bin/hooks` once after cloning.
 - **Override** an intentional commit with `git commit --no-verify`.
@@ -317,16 +324,17 @@ from page frontmatter by `bin/generate-index.py`:
 
 ### 4. Install the `bin/` helper scripts and generate the index
 
-The wiki ships three stdlib-only helper scripts (no dependencies) plus a tracked git hook.
+The wiki ships four stdlib-only helper scripts (no dependencies) plus a tracked git hook.
 They are **bundled with this skill** at `assets/bin/` — copy them verbatim into
 `<wiki-root>/bin/` (do not retype or regenerate them). From this skill's directory:
 
 ```sh
 mkdir -p <wiki-root>/bin/hooks
-cp assets/bin/generate-index.py      <wiki-root>/bin/
-cp assets/bin/render-log.py          <wiki-root>/bin/
+cp assets/bin/generate-index.py       <wiki-root>/bin/
+cp assets/bin/render-log.py           <wiki-root>/bin/
 cp assets/bin/check-contradictions.py <wiki-root>/bin/
-cp assets/bin/hooks/pre-commit       <wiki-root>/bin/hooks/
+cp assets/bin/lint-mechanical.py      <wiki-root>/bin/
+cp assets/bin/hooks/pre-commit        <wiki-root>/bin/hooks/
 chmod +x <wiki-root>/bin/*.py <wiki-root>/bin/hooks/pre-commit
 ```
 
@@ -338,12 +346,19 @@ What each one does:
 - **`bin/render-log.py`** — renders the operation log from git history on demand (see the
   **Operation Log & Commit Convention** in `SCHEMA.md`). Harmless on a non-git wiki — it
   just reports that the log lives in `log.md`.
-- **`bin/check-contradictions.py`** — the pre-commit gate (see the **Pre-commit Gate** and
+- **`bin/check-contradictions.py`** — a pre-commit gate (see the **Pre-commit Gate** and
   **Contradiction Check** sections in `SCHEMA.md`). It blocks a commit that stages a
   `wiki/pages/` file still carrying P8's `contradiction-check: failed` flag. Deterministic,
   no LLM. Harmless on a non-git wiki — it no-ops.
-- **`bin/hooks/pre-commit`** — the tracked git hook that runs the checker via `uv run` (so
-  an interpreter is guaranteed). It is wired up in step 5.
+- **`bin/lint-mechanical.py`** — the deterministic health checks, two modes. Full mode
+  (`python bin/lint-mechanical.py`) emits JSON for `wiki-lint`'s Phase 1 (broken links,
+  orphans, missing frontmatter, slug collisions, stale-date, missing-concept) plus the
+  tag-cluster list for its contradiction sweep. Staged mode (`--staged`) is the second
+  pre-commit gate: it blocks a commit whose staged pages have missing frontmatter, a broken
+  link, or a slug collision. No LLM; no-ops outside a git work tree.
+- **`bin/hooks/pre-commit`** — the tracked git hook that chains both gates
+  (`check-contradictions.py`, then `lint-mechanical.py --staged`) via `uv run` (so an
+  interpreter is guaranteed). It is wired up in step 5.
 
 ### 5. Set up the operation log
 
@@ -351,8 +366,9 @@ How operations are logged depends on whether the wiki is a git repo. **Offer to 
 `git init`** if it isn't one already — the git-history log is the better path.
 
 - **Git repo:** the git history *is* the operation log (see SCHEMA's **Operation Log &
-  Commit Convention**). Do **not** create `log.md`. First install the **pre-commit gate**
-  (P9): make the hook executable and point git at the tracked hooks directory —
+  Commit Convention**). Do **not** create `log.md`. First install the **pre-commit gates**
+  (contradiction flag + structural validity): make the hook executable and point git at the
+  tracked hooks directory —
   ```
   chmod +x bin/hooks/pre-commit
   git config core.hooksPath bin/hooks

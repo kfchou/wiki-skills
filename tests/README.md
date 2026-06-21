@@ -29,3 +29,7 @@ python3 -m unittest discover -s tests
   carrying the `contradiction-check: failed` flag, ignoring the flag in body prose, ignoring
   unstaged flags and pages outside `wiki/pages/`, excluding audit reports, and the non-git
   no-op path.
+- `test_lint_mechanical.py` — `bin/lint-mechanical.py` (scoped wiki-lint): full-mode checks
+  (missing frontmatter, broken links, orphans, slug collisions, stale-date, missing-concept),
+  tag clustering (singleton skip, subset dedup, oversized-cluster split), and the `--staged`
+  pre-commit gate (blocks structural problems in staged blobs; no-ops outside git).
