@@ -39,6 +39,7 @@ Read `wiki/index.md`, `wiki/overview.md`, and all files in `wiki/pages/`. Build 
 - **Missing concept pages** — `[[slug]]` references that appear 3+ times across the wiki but have no dedicated page
 - **Coverage gaps** — open questions listed in `overview.md` that could be answered by a web search or new ingest
 - **Missing cross-references** — two pages that discuss the same entity but don't link to each other
+- **Addable line-ranges** — footnotes whose target resolves to a text-addressable raw file (markdown / plaintext / code / cached HTML) but carry no `L…` line-range. These are legacy citations: still valid, but a line-range would let `wiki-audit` verify them deterministically. Never an error — only a suggestion. PDFs, transcripts, and live URLs are exempt and must NOT be flagged.
 
 ### 3. Write the lint report
 
@@ -89,6 +90,10 @@ updated: <today>
 
 ## 🔵 Missing Cross-References
 - [[page-a]] and [[page-b]] both discuss <entity> but don't link to each other
+
+## 🔵 Addable Line-Ranges
+- [[page]] [^3] cites text source [[markdown-source]] with no line-range
+  Fix: add an `L<start>-<end>` token so wiki-audit can verify it deterministically
 ```
 
 Add the lint report to `wiki/index.md` under a Maintenance category (create it if it doesn't exist).
