@@ -176,6 +176,7 @@ updated: <today>
 - Cited claims verified: N
 - ✅ Supported: N    ❌ Unsupported: N    ⚠️ Partial: N    🚫 Source missing: N
 - 🆘 Uncited factual claims: N
+- 🧪 Cross-model disagreements: N   (strong mode only; omit this line in normal mode)
 
 ## 🆘 Uncited Claims (Phase A)
 - Line 42: "Transformers replaced LSTMs as the default sequence model."
@@ -197,9 +198,18 @@ updated: <today>
 
 ## ✅ Supported
 - [^1], [^2], [^4], [^6], [^8] — all verified
+
+## 🧪 Cross-Model Review (<model> / <provider>)
+- overreach — [^3]: claim generalizes to "all transformers" but the cited excerpt
+  (L142-143) covers only the encoder.
+- internal-contradiction — line 12 says "8 heads", line 40 says "16 heads".
+- cross-page-contradiction — [[this-page]] vs [[other-page]] disagree on the release date.
+Disposition: surfaced for user review (not auto-applied).
 ```
 
-Add the report to `wiki/index.md` under the `Maintenance` category (create the category if it does not yet exist — `wiki-lint` uses the same category).
+Include the `## 🧪 Cross-Model Review` section ONLY in strong mode. Its header names the reviewer (e.g. `(codex / openai)`); when the provider chain fell back to the subagent it reads `(claude-sonnet / anthropic — same-provider, weaker signal)`. List one line per Phase C disagreement; if Phase C found none, write `- none — reviewer agreed with the normal audit.`
+
+**Audit reports are local-only artifacts.** Before writing the report, ensure the wiki `.gitignore` (at the wiki root) contains the line `wiki/pages/audit-*.md`; append it if missing (self-healing for wikis initialized before this convention — create `.gitignore` if there is none). Do **not** add the report to `wiki/index.md`: the report is gitignored, so an index entry would be a dangling link in any other clone. For a strong-mode run, the committed record is the `review:` frontmatter token stamped on the page in §3b; the report itself stays local.
 
 ### 5. Offer concrete fixes
 
@@ -214,11 +224,12 @@ Apply only after user confirmation. Show the exact diff before each write.
 
 ### 6. Append to `wiki/log.md`
 
-Always append — do not ask permission:
+Always append — do not ask permission. In strong mode, append the cross-model result too. The `Report:` line points at the local-only (gitignored) report; that is expected.
 
 ```
 ## [<today>] audit | [[<page-slug>]] — N supported, N unsupported, N partial, N uncited
-Report: [[audit-<page-slug>-<today>]]
+Report: audit-<page-slug>-<today>.md (local-only)
+Cross-model: <model>/<provider> — clean | N disagreements   # strong mode only
 Fixed: <list, or "none">
 ```
 
