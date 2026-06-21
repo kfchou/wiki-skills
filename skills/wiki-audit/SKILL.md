@@ -24,7 +24,12 @@ Three rules:
 1. Target is one of: [[source-slug]] (a source-type wiki page), raw/<file> or
    assets/<file> (a local file path), or a URL. Never an entity / concept /
    analysis page.
-2. A locator is present (§section, p.N, [HH:MM:SS], URL anchor, dated post).
+2. A semantic locator is present (§section, p.N, [HH:MM:SS], URL anchor, dated
+   post). PLUS a line-range token (L142-145, L142, or L142-145,L201-203) when the
+   resolved raw source is text-addressable (markdown / plaintext / code / cached
+   HTML). The line-range points into the raw source file and is required for both
+   citation kinds. Exempt (semantic locator only): PDFs, transcripts, live URLs
+   with no local copy.
 3. Either a verbatim quote, or the [synthesis] tag plus a description of what
    the cited range supports.
 ```
