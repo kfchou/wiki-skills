@@ -13,7 +13,7 @@ implementation plan.
 | Plan | Title | Stage |
 |------|-------|-------|
 | P1 | Line-range provenance | ✅ spec + implementation plan written |
-| P2 | Cross-model adversarial review | ⬜ roadmap only |
+| P2 | Cross-model adversarial review | ✅ spec + implementation plan written |
 | P3 | Concept identity | ⬜ roadmap only |
 | P4 | Frontmatter-driven auto-generated index | ⬜ roadmap only |
 | P5 | Adaptive / tiered index for scale | ⬜ roadmap only |
