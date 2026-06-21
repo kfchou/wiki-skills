@@ -1,4 +1,4 @@
-"""Tests for bin/check-contradictions.py (embedded in wiki-init/SKILL.md)."""
+"""Tests for bin/check-contradictions.py (bundled at skills/wiki-init/assets/bin/)."""
 import os
 import subprocess
 import sys

@@ -2,11 +2,10 @@
 
 Unit tests for the wiki helper scripts that `wiki-init` writes into every wiki.
 
-These scripts have no standalone source file in this repo — their canonical source is the
-fenced ```python block inside `skills/wiki-init/SKILL.md`, since that is exactly what
-`wiki-init` writes into a wiki's `bin/`. The tests **extract those blocks** (via
-`_harness.extract_script`) and exercise them, so they validate what actually ships. If you
-edit a script in the SKILL, rerun these tests.
+These scripts are standalone files bundled with the skill at
+`skills/wiki-init/assets/bin/` — exactly the files `wiki-init` copies into a wiki's `bin/`.
+The tests **install those files** (via `_harness.install_script`) and exercise them, so they
+validate what actually ships. If you edit a script under `assets/bin/`, rerun these tests.
 
 ## Running
 
@@ -26,3 +25,7 @@ python3 -m unittest discover -s tests
 - `test_render_log.py` — `bin/render-log.py` (P6): rendering `Wiki-Op:` commits grouped by
   date, ignoring commits without the trailer, excluding gitignored audit pages, and the
   non-git exit path.
+- `test_check_contradictions.py` — `bin/check-contradictions.py` (P9): blocking staged pages
+  carrying the `contradiction-check: failed` flag, ignoring the flag in body prose, ignoring
+  unstaged flags and pages outside `wiki/pages/`, excluding audit reports, and the non-git
+  no-op path.

@@ -1,40 +1,24 @@
 """Shared test helpers.
 
-The wiki helper scripts (`generate-index.py`, `render-log.py`) are not standalone files in
-this repo — their canonical source is the fenced ```python block embedded in
-`skills/wiki-init/SKILL.md`, because that is what `wiki-init` writes into each wiki. The
-tests extract those exact blocks and exercise them, so the tests validate what ships.
+The wiki helper scripts (`generate-index.py`, `render-log.py`, `check-contradictions.py`)
+are standalone files bundled with the skill at `skills/wiki-init/assets/bin/` — exactly the
+files `wiki-init` copies into each wiki. The tests install those files and exercise them, so
+the tests validate what ships.
 """
-import re
+import shutil
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SKILL = REPO_ROOT / "skills" / "wiki-init" / "SKILL.md"
-
-# A unique substring of each script's module docstring, used to pick its code block.
-_SIGNATURES = {
-    "generate-index": "Generate wiki/index.md from page frontmatter",
-    "render-log": "Render the wiki operation log from git history",
-    "check-contradictions": "Block commits that stage a wiki page still flagged",
-}
-
-
-def extract_script(name):
-    """Return the source of the named helper script from wiki-init/SKILL.md."""
-    sig = _SIGNATURES[name]
-    text = SKILL.read_text(encoding="utf-8")
-    for block in re.findall(r"```python\n(.*?)\n```", text, re.S):
-        if sig in block:
-            return block + "\n"
-    raise AssertionError(f"script {name!r} not found in {SKILL}")
+ASSETS_BIN = REPO_ROOT / "skills" / "wiki-init" / "assets" / "bin"
 
 
 def install_script(name, wiki_root):
-    """Write the named helper script into <wiki_root>/bin/ and return its path."""
+    """Copy the named helper script into <wiki_root>/bin/ and return its path."""
     bin_dir = Path(wiki_root) / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
+    src = ASSETS_BIN / f"{name}.py"
     dest = bin_dir / f"{name}.py"
-    dest.write_text(extract_script(name), encoding="utf-8")
+    shutil.copy2(src, dest)
     return dest
 
 

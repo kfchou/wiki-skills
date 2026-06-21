@@ -30,9 +30,11 @@ Ask:
 <wiki-root>/
 ├── SCHEMA.md         ← conventions + absolute path (how other skills find the wiki)
 ├── .gitignore        ← local-only / generated artifacts (audit reports, index) excluded from version control
-├── bin/
+├── bin/                  ← helper scripts (copied verbatim from this skill's assets/bin/)
 │   ├── generate-index.py  ← regenerates wiki/index.md from page frontmatter (stdlib only)
-│   └── render-log.py      ← renders the operation log from git history (stdlib only)
+│   ├── render-log.py      ← renders the operation log from git history (stdlib only)
+│   ├── check-contradictions.py ← pre-commit gate: blocks staged pages flagged as contradicting
+│   └── hooks/pre-commit   ← tracked git hook that runs the checker (wired via core.hooksPath)
 ├── raw/              ← immutable source documents (you add these, LLM never modifies)
 ├── wiki/
 │   ├── index.md      ← GENERATED catalog (gitignored) — never hand-edit; run bin/generate-index.py
@@ -313,322 +315,35 @@ from page frontmatter by `bin/generate-index.py`:
 </if>
 ```
 
-### 4. Write the `bin/` helper scripts and generate the index
+### 4. Install the `bin/` helper scripts and generate the index
 
 The wiki ships three stdlib-only helper scripts (no dependencies) plus a tracked git hook.
-Write each to `<wiki-root>/bin/` **exactly** as below.
-
-**`bin/generate-index.py`** — `wiki/index.md` is not hand-written; it is generated from
-page frontmatter so it can never drift from reality. After writing it, run it once
-(`python bin/generate-index.py`) so a valid `index.md` exists.
-
-```python
-#!/usr/bin/env python3
-"""Generate wiki/index.md from page frontmatter.
-
-index.md is a runtime-only, gitignored artifact. Run this before reading the index and
-after any operation that adds, removes, renames, or re-categorizes a page. Never
-hand-edit index.md — edit the page's frontmatter and rerun this script.
-"""
-import sys
-from pathlib import Path
-
-WIKI_ROOT = Path(__file__).resolve().parent.parent
-PAGES_DIR = WIKI_ROOT / "wiki" / "pages"
-SCHEMA = WIKI_ROOT / "SCHEMA.md"
-INDEX = WIKI_ROOT / "wiki" / "index.md"
-
-
-def parse_frontmatter(text):
-    """Return the page's frontmatter as a dict, or None if absent/unterminated.
-
-    Only scalar `key: value` lines are needed (title, category, summary, created).
-    List values like `tags: [...]` are ignored. No third-party deps.
-    """
-    if not text.startswith("---"):
-        return None
-    lines = text.splitlines()
-    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
-    if end is None:
-        return None
-    fm = {}
-    for line in lines[1:end]:
-        if not line.strip() or line.lstrip().startswith("#") or ":" not in line:
-            continue
-        key, _, value = line.partition(":")
-        key, value = key.strip(), value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
-        fm[key] = value
-    return fm
-
-
-def read_schema():
-    """Return (domain, [categories]) parsed from SCHEMA.md."""
-    domain, categories = "", []
-    if not SCHEMA.exists():
-        return domain, categories
-    in_categories = False
-    for line in SCHEMA.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if "**Domain:**" in line:
-            domain = line.split("**Domain:**", 1)[1].strip()
-        if stripped.startswith("## "):
-            in_categories = stripped[3:].strip().lower() == "index categories"
-            continue
-        if in_categories and stripped:
-            cat = stripped.lstrip("-").strip()
-            if cat and not cat.startswith("<"):
-                categories.append(cat)
-    return domain, categories
-
-
-def main():
-    if not PAGES_DIR.exists():
-        sys.exit(f"no pages directory at {PAGES_DIR}")
-    domain, schema_categories = read_schema()
-
-    pages = []
-    for path in sorted(PAGES_DIR.glob("*.md")):
-        if path.name.startswith("audit-"):
-            continue  # gitignored local-only artifacts
-        fm = parse_frontmatter(path.read_text(encoding="utf-8"))
-        if fm is None:
-            print(f"warning: {path.name} has no frontmatter; skipping", file=sys.stderr)
-            continue
-        pages.append({
-            "slug": path.stem,
-            "title": fm.get("title", path.stem),
-            "category": fm.get("category", "Uncategorized"),
-            "summary": fm.get("summary", ""),
-            "created": fm.get("created", ""),
-        })
-
-    extras = sorted({p["category"] for p in pages
-                     if p["category"] not in schema_categories
-                     and p["category"] != "Uncategorized"})
-    ordered = list(schema_categories) + extras
-    if any(p["category"] == "Uncategorized" for p in pages):
-        ordered.append("Uncategorized")
-
-    out = [f"# Wiki Index — {domain}".rstrip(), "",
-           "<!-- Generated by bin/generate-index.py. Do not edit by hand. -->", ""]
-    for cat in ordered:
-        entries = [p for p in pages if p["category"] == cat]
-        if not entries:
-            continue
-        entries.sort(key=lambda p: p["title"])              # tiebreak: title asc
-        entries.sort(key=lambda p: p["created"], reverse=True)  # primary: created desc
-        out.append(f"### {cat}")
-        for p in entries:
-            summary = f" — {p['summary']}" if p["summary"] else ""
-            date = f" _({p['created']})_" if p["created"] else ""
-            out.append(f"- [[{p['slug']}]]{summary}{date}")
-        out.append("")
-
-    INDEX.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
-    print(f"wrote {INDEX} ({len(pages)} pages)")
-
-
-if __name__ == "__main__":
-    main()
-```
-
-**`bin/render-log.py`** — renders the operation log from git history on demand (see the
-**Operation Log & Commit Convention** in `SCHEMA.md`). It is harmless to ship even on a
-non-git wiki — it just reports that the log lives in `log.md`.
-
-```python
-#!/usr/bin/env python3
-"""Render the wiki operation log from git history.
-
-In a git wiki, each operation is recorded as a commit carrying a `Wiki-Op:` trailer
-(see the Operation Log & Commit Convention in SCHEMA.md). This renders those commits as
-a human-readable, newest-first log on demand — replacing a hand-maintained log.md.
-Commits without a `Wiki-Op:` trailer (e.g. manual edits) are ignored.
-"""
-import subprocess
-import sys
-from pathlib import Path
-
-WIKI_ROOT = Path(__file__).resolve().parent.parent
-REC = "\x1e"  # record separator between commits
-FLD = "\x1f"  # field separator within a commit
-
-
-def git(*args):
-    result = subprocess.run(
-        ["git", "-C", str(WIKI_ROOT), *args],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip())
-    return result.stdout
-
-
-def main():
-    try:
-        git("rev-parse", "--is-inside-work-tree")
-    except RuntimeError:
-        sys.exit("not a git repo — the operation log lives in wiki/log.md (the non-git fallback)")
-
-    fmt = f"{REC}%H{FLD}%as{FLD}%s{FLD}%b{FLD}"
-    raw = git("log", f"--pretty=format:{fmt}", "--name-status")
-
-    by_date = {}
-    order = []
-    for chunk in raw.split(REC):
-        if not chunk.strip():
-            continue
-        parts = chunk.split(FLD)
-        if len(parts) < 5:
-            continue
-        commit, date, subject, body, namestatus = (
-            parts[0].lstrip("\n"), parts[1], parts[2], parts[3], parts[4])
-
-        op = None
-        for line in body.splitlines():
-            if line.lower().startswith("wiki-op:"):
-                op = line.split(":", 1)[1].strip()
-                break
-        if not op:
-            continue  # not a wiki operation
-
-        pages = []
-        for line in namestatus.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            path = line.split("\t")[-1]
-            if path.startswith("wiki/pages/") and path.endswith(".md"):
-                slug = path[len("wiki/pages/"):-len(".md")]
-                if not slug.startswith("audit-"):
-                    pages.append(slug)
-
-        if date not in by_date:
-            by_date[date] = []
-            order.append(date)
-        page_str = " (" + ", ".join(f"`{p}`" for p in pages) + ")" if pages else ""
-        by_date[date].append(f"- **{op}** — {subject}{page_str}  `{commit[:8]}`")
-
-    out = ["# Wiki Operation Log", "",
-           "_Rendered from git history by bin/render-log.py. Do not edit by hand._", ""]
-    for date in order:  # git log is already newest-first
-        out.append(f"## {date}")
-        out.extend(by_date[date])
-        out.append("")
-    sys.stdout.write("\n".join(out).rstrip() + "\n")
-
-
-if __name__ == "__main__":
-    main()
-```
-
-**`bin/check-contradictions.py`** — the pre-commit gate (see the **Pre-commit Gate** and
-**Contradiction Check** sections in `SCHEMA.md`). It blocks a commit that stages a
-`wiki/pages/` file still carrying P8's `contradiction-check: failed` flag. Deterministic,
-no LLM. Harmless on a non-git wiki — it no-ops.
-
-```python
-#!/usr/bin/env python3
-"""Block commits that stage a wiki page still flagged with a contradiction.
-
-wiki-ingest writes `contradiction-check: failed` into a page's frontmatter when it finds a
-blocking contradiction, and removes it once resolved. This pre-commit gate is the
-deterministic backstop: it scans the *staged* content of wiki/pages/*.md and, if any still
-carries that flag in its frontmatter, blocks the commit. No LLM, stdlib only.
-
-Invoked from bin/hooks/pre-commit. Override an intentional commit with `git commit --no-verify`.
-"""
-import subprocess
-import sys
-from pathlib import Path
-
-WIKI_ROOT = Path(__file__).resolve().parent.parent
-FLAG_KEY = "contradiction-check"
-
-
-def git(*args):
-    result = subprocess.run(
-        ["git", "-C", str(WIKI_ROOT), *args],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip())
-    return result.stdout
-
-
-def staged_pages():
-    """Yield staged (added/copied/modified) wiki/pages/*.md paths, excluding audit reports."""
-    out = git("diff", "--cached", "--name-only", "--diff-filter=ACM")
-    for path in out.splitlines():
-        path = path.strip()
-        if (path.startswith("wiki/pages/") and path.endswith(".md")
-                and not Path(path).name.startswith("audit-")):
-            yield path
-
-
-def frontmatter_flag(text):
-    """Return the flag's reason if the frontmatter carries `contradiction-check: failed`.
-
-    Parses only the leading `---` ... `---` block, so a mention of the token in the page
-    body (or any prose) never trips the gate. Returns None when clean or unterminated.
-    """
-    if not text.startswith("---"):
-        return None
-    lines = text.splitlines()
-    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
-    if end is None:
-        return None
-    for line in lines[1:end]:
-        key, _, value = line.partition(":")
-        if key.strip() == FLAG_KEY and value.strip().lower().startswith("failed"):
-            return value.strip()
-    return None
-
-
-def main():
-    try:
-        git("rev-parse", "--is-inside-work-tree")
-    except RuntimeError:
-        return  # not a git repo — nothing to gate
-
-    flagged = []
-    for path in staged_pages():
-        try:
-            staged = git("show", f":{path}")  # the staged blob, not the working tree
-        except RuntimeError:
-            continue
-        reason = frontmatter_flag(staged)
-        if reason is not None:
-            flagged.append((path, reason))
-
-    if not flagged:
-        return
-
-    print("commit blocked — unresolved contradiction flag in staged page(s):\n",
-          file=sys.stderr)
-    for path, reason in flagged:
-        print(f"  {path}\n    {reason}", file=sys.stderr)
-    print("\nResolve the contradiction and remove the `contradiction-check:` line "
-          "(see wiki-ingest step 7b), then re-stage.", file=sys.stderr)
-    print("To commit anyway: git commit --no-verify", file=sys.stderr)
-    sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
-```
-
-**`bin/hooks/pre-commit`** — the tracked git hook that runs the checker via `uv run` (so an
-interpreter is guaranteed). Make it executable (`chmod +x`); it is wired up in step 5.
+They are **bundled with this skill** at `assets/bin/` — copy them verbatim into
+`<wiki-root>/bin/` (do not retype or regenerate them). From this skill's directory:
 
 ```sh
-#!/bin/sh
-# Wiki pre-commit gate (P9): block commits that stage a page still flagged with an
-# unresolved contradiction. See bin/check-contradictions.py. Override: git commit --no-verify.
-exec uv run "$(git rev-parse --show-toplevel)/bin/check-contradictions.py"
+mkdir -p <wiki-root>/bin/hooks
+cp assets/bin/generate-index.py      <wiki-root>/bin/
+cp assets/bin/render-log.py          <wiki-root>/bin/
+cp assets/bin/check-contradictions.py <wiki-root>/bin/
+cp assets/bin/hooks/pre-commit       <wiki-root>/bin/hooks/
+chmod +x <wiki-root>/bin/*.py <wiki-root>/bin/hooks/pre-commit
 ```
+
+What each one does:
+
+- **`bin/generate-index.py`** — `wiki/index.md` is generated from page frontmatter, never
+  hand-written, so it can never drift from reality. After copying, run it once
+  (`python bin/generate-index.py`) so a valid `index.md` exists.
+- **`bin/render-log.py`** — renders the operation log from git history on demand (see the
+  **Operation Log & Commit Convention** in `SCHEMA.md`). Harmless on a non-git wiki — it
+  just reports that the log lives in `log.md`.
+- **`bin/check-contradictions.py`** — the pre-commit gate (see the **Pre-commit Gate** and
+  **Contradiction Check** sections in `SCHEMA.md`). It blocks a commit that stages a
+  `wiki/pages/` file still carrying P8's `contradiction-check: failed` flag. Deterministic,
+  no LLM. Harmless on a non-git wiki — it no-ops.
+- **`bin/hooks/pre-commit`** — the tracked git hook that runs the checker via `uv run` (so
+  an interpreter is guaranteed). It is wired up in step 5.
 
 ### 5. Set up the operation log
 

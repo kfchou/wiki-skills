@@ -1,0 +1,4 @@
+#!/bin/sh
+# Wiki pre-commit gate (P9): block commits that stage a page still flagged with an
+# unresolved contradiction. See bin/check-contradictions.py. Override: git commit --no-verify.
+exec uv run "$(git rev-parse --show-toplevel)/bin/check-contradictions.py"

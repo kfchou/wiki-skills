@@ -1,4 +1,4 @@
-"""Tests for bin/render-log.py (embedded in wiki-init/SKILL.md)."""
+"""Tests for bin/render-log.py (bundled at skills/wiki-init/assets/bin/)."""
 import subprocess
 import sys
 import tempfile
