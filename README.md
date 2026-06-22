@@ -22,6 +22,43 @@ The wiki format is remarkably similar to how the Claude Code Harness manages mem
 /plugin marketplace remove wiki-skills
 ```
 
+## Requirements & setup
+
+The skills run wherever Claude Code does. A wiki additionally relies on:
+
+- **Python 3** — standard library only, no `pip install`. Runs the `bin/` helper scripts
+  (index generation, log rendering, and the deterministic lint and commit checks).
+- **git** *(optional, recommended)* — if your wiki is a git repo, the operation log comes
+  from git history and `wiki-init` installs the commit-time safety gates below. A non-git
+  wiki works fine: it keeps a plain `wiki/log.md` and installs **no** scripts-as-hooks and
+  **no** git config.
+- **uv** *(only for the git gates)* — the pre-commit hook runs the checker with `uv run`, so
+  an interpreter is always present. No uv? Skip the hook (see *Opt out* below); the scripts
+  still work when you run them directly.
+
+### What `wiki-init` sets up on a git wiki
+
+When you initialize a wiki inside a git repo, `wiki-init` configures the following — and
+tells you as it does. None of it applies to a non-git wiki.
+
+- **Helper scripts** copied into `bin/`: `generate-index.py`, `render-log.py`,
+  `check-contradictions.py`, `lint-mechanical.py`.
+- **A tracked pre-commit hook** (`bin/hooks/pre-commit`) wired up with one git config line:
+  ```bash
+  git config core.hooksPath bin/hooks
+  ```
+  It chains two deterministic, no-LLM gates that **block a commit** when a staged page has an
+  unresolved contradiction flag or a structural problem (missing frontmatter, a broken
+  `[[link]]`, or a slug collision).
+- **Override a blocked commit:** `git commit --no-verify`.
+- **After a fresh clone:** `core.hooksPath` is repo-local config that git does *not* clone —
+  re-run the `git config core.hooksPath bin/hooks` line once to re-enable the gates.
+- **Opt out:** don't set `core.hooksPath` (or `git config --unset core.hooksPath`) and no
+  hook runs. The scripts remain usable on demand.
+
+Each wiki also records this in its own `SCHEMA.md`, so the configuration travels with the
+wiki rather than living only here.
+
 ## Skills
 
 | Skill | Description |
@@ -41,7 +78,8 @@ The wiki format is remarkably similar to how the Claude Code Harness manages mem
 ```
 <wiki-root>/
 ├── SCHEMA.md        # Conventions + wiki root path (how skills find the wiki)
-├── bin/             # generate-index.py (index) + render-log.py (operation log from git)
+├── bin/             # Helper scripts: generate-index, render-log, check-contradictions,
+│                    #   lint-mechanical, and hooks/pre-commit (see Requirements & setup)
 ├── raw/             # Immutable source documents (you manage)
 ├── wiki/
 │   ├── index.md     # GENERATED catalog (gitignored) — rebuilt from page frontmatter
