@@ -26,20 +26,22 @@ The wiki format is remarkably similar to how the Claude Code Harness manages mem
 
 The skills run wherever Claude Code does. A wiki additionally relies on:
 
-- **Python 3** — standard library only, no `pip install`. Runs the `bin/` helper scripts
-  (index generation, log rendering, and the deterministic lint and commit checks).
+- **uv** — required. The `bin/` helper scripts (index generation, log rendering, and the
+  deterministic lint and commit checks) run via `uv run`, and the pre-commit hook invokes them
+  the same way. uv also provides Python: if Python 3 isn't already on the system, `uv` will
+  download and manage it for you, so uv is the only thing you need to install.
+- **Python 3** — standard library only, no `pip install`. Supplied by uv if not already present.
 - **git** *(optional, recommended)* — if your wiki is a git repo, the operation log comes
   from git history and `wiki-init` installs the commit-time safety gates below. A non-git
   wiki works fine: it keeps a plain `wiki/log.md` and installs **no** scripts-as-hooks and
   **no** git config.
-- **uv** *(only for the git gates)* — the pre-commit hook runs the checker with `uv run`, so
-  an interpreter is always present. No uv? Skip the hook (see *Opt out* below); the scripts
-  still work when you run them directly.
+- **`codex` or `gemini` CLI** *(optional)* — enables a true cross-provider adversarial review
+  in `wiki-audit strong` (see below). Without either, strong mode falls back to a same-provider
+  Claude subagent and labels its findings as the weaker signal.
 
-### What `wiki-init` sets up on a git wiki
+### Set up: `wiki-init`
 
-When you initialize a wiki inside a git repo, `wiki-init` configures the following — and
-tells you as it does. None of it applies to a non-git wiki.
+When you initialize a wiki inside a git repo, run `wiki-init` to configures the following:
 
 - **Helper scripts** copied into `bin/`: `generate-index.py`, `render-log.py`,
   `check-contradictions.py`, `lint-mechanical.py`.
@@ -50,11 +52,6 @@ tells you as it does. None of it applies to a non-git wiki.
   It chains two deterministic, no-LLM gates that **block a commit** when a staged page has an
   unresolved contradiction flag or a structural problem (missing frontmatter, a broken
   `[[link]]`, or a slug collision).
-- **Override a blocked commit:** `git commit --no-verify`.
-- **After a fresh clone:** `core.hooksPath` is repo-local config that git does *not* clone —
-  re-run the `git config core.hooksPath bin/hooks` line once to re-enable the gates.
-- **Opt out:** don't set `core.hooksPath` (or `git config --unset core.hooksPath`) and no
-  hook runs. The scripts remain usable on demand.
 
 Each wiki also records this in its own `SCHEMA.md`, so the configuration travels with the
 wiki rather than living only here.
@@ -68,7 +65,7 @@ wiki rather than living only here.
 | `wiki-query` | Ask a question against the wiki; optionally save the answer back |
 | `wiki-lint` | Health audit: contradictions, orphans, broken links, coverage gaps |
 | `wiki-update` | Revise existing pages when knowledge changes |
-| `wiki-audit` | Per-page citation audit: verify every footnote against its source, flag uncited claims |
+| `wiki-audit` | Per-page citation audit: verify every footnote against its source, flag uncited claims. `wiki-audit strong` adds a cross-model adversarial review |
 | `wiki-merge` | Consolidate two pages that are the same concept (merge), or split one overloaded slug into qualified pages |
 
 ## How It Works
@@ -106,7 +103,7 @@ wiki-merge         → merge duplicate concept pages, or split an overloaded slu
 - **`wiki-ingest`** surfaces key takeaways and asks what to emphasize *before* writing anything. After creating a source page, it runs a backlink audit — scanning existing pages to add bidirectional links.
 - **`wiki-query`** always reads the wiki (never answers from memory). Always offers to file the answer back as a new page with `[[citations]]`.
 - **`wiki-lint`** writes a severity-tiered report (`🔴 errors / 🟡 warnings / 🔵 info`) to `wiki/pages/lint-<date>.md`, offers concrete fixes, and logs unconditionally.
-- **`wiki-audit`** fact-checks one page against its sources. Phase A flags uncited factual claims; Phase B dispatches one subagent per source in parallel to verify each footnote (quote citations are string-matched, `[synthesis]` citations are judged against the cited range). Writes a verdict report to `wiki/pages/audit-<page>-<date>.md` and offers concrete fixes.
+- **`wiki-audit`** fact-checks one page against its sources. Phase A flags uncited factual claims; Phase B dispatches one subagent per source in parallel to verify each footnote (quote citations are string-matched, `[synthesis]` citations are judged against the cited range). Writes a verdict report to `wiki/pages/audit-<page>-<date>.md` and offers concrete fixes. **Strong mode** (`wiki-audit strong`) adds Phase C: a different-provider model (`codex` or `gemini`, else a Claude subagent fallback) re-examines the same claims for overreach and contradiction, and disagreements with the normal pass become findings.
 - **`wiki-update`** always shows diffs before writing, always cites the source of new information, sweeps all pages for the same stale claim, and logs unconditionally.
 - **The index is generated, not hand-maintained.** `wiki/index.md` is a gitignored runtime artifact rebuilt from each page's `category` + `summary` frontmatter by `bin/generate-index.py`. Skills regenerate it before reading and after any page change, so it never drifts from the pages — no manual entry bookkeeping, no merge conflicts.
 - **The operation log comes from git.** On a git wiki, each operation is recorded as a commit carrying a `Wiki-Op:` trailer (subject follows the repo's convention, defaulting to Conventional Commits). Skills suggest the commit and commit on your confirmation — they never auto-commit. `bin/render-log.py` renders the history as a human log on demand, so there's no growing `log.md`. Non-git wikis keep `log.md` as a fallback.
