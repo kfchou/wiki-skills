@@ -1,0 +1,8 @@
+#!/bin/sh
+# Wiki pre-commit gates: block a commit that stages a page with an unresolved contradiction
+# flag (check-contradictions.py) or a structural problem — missing frontmatter, a broken
+# link, or a slug collision (lint-mechanical.py --staged). Both are deterministic, no LLM.
+# Override: git commit --no-verify.
+ROOT="$(git rev-parse --show-toplevel)"
+uv run "$ROOT/bin/check-contradictions.py" || exit 1
+uv run "$ROOT/bin/lint-mechanical.py" --staged || exit 1

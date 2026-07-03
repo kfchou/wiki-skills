@@ -1,0 +1,3 @@
+# Python bytecode from running the test suite
+__pycache__/
+*.py[cod]

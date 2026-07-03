@@ -17,7 +17,10 @@ Find `SCHEMA.md` (search from cwd upward, or `~/wikis/`). If not found, tell the
 
 ### 1. Read `wiki/index.md` first
 
-Scan the full index to identify which pages are likely relevant. Do NOT answer from general knowledge — the wiki is the source of truth here, even if you think you know the answer.
+Regenerate the index so it reflects the current pages — `python bin/generate-index.py` —
+then scan the full index to identify which pages are likely relevant. Do NOT answer from
+general knowledge — the wiki is the source of truth here, even if you think you know the
+answer.
 
 ### 2. Read relevant pages
 
@@ -45,16 +48,27 @@ After answering, say:
 > "Worth saving as `wiki/pages/<suggested-slug>.md`?"
 
 If yes:
-- Write the page with frontmatter: `tags: [query, analysis]`, `sources: [all cited slugs]`
-- Add entry to `wiki/index.md` under the correct category (Analyses or similar), using the wiki's link_style for the new slug
-- Append to `wiki/log.md`:
-  ```
-  ## [<today>] query | <question summary>
-  Filed as: <slug-reference to the new slug, in the wiki's link_style>
-  ```
+- Write the page with full frontmatter: `title`, `category: Analyses` (or the wiki's
+  equivalent), `summary` (one-line), `tags: [query, analysis]`, `sources: [all cited slugs]`,
+  `created: <today>`, `updated: <today>`
+- Regenerate the index — `python bin/generate-index.py` — do not hand-edit `index.md`
+- Record the operation (per SCHEMA's **Operation Log & Commit Convention**):
+  - **Git wiki:** suggest a commit (default `docs:` for a saved query, plus the trailer);
+    commit on confirmation.
+    ```
+    docs: add analysis — <question summary>
+
+    Wiki-Op: query
+    ```
+  - **Non-git wiki:** append to `wiki/log.md`:
+    ```
+    ## [<today>] query | <question summary>
+    Filed as: <slug reference to the new slug, in the wiki's link_style>
+    ```
 
 If no:
-- Append to `wiki/log.md`:
+- **Git wiki:** nothing changed, so there is nothing to commit — the query is not logged.
+- **Non-git wiki:** append to `wiki/log.md`:
   ```
   ## [<today>] query | <question summary>
   Not filed.
