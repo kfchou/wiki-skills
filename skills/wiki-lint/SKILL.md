@@ -14,6 +14,8 @@ the operation.
 
 Find `SCHEMA.md` (search from cwd upward, or `~/wikis/`). If not found, tell the user to run `wiki-init` first. Read it to get wiki root path and conventions.
 
+**Link style.** Read `link_style:` from `SCHEMA.md`. If the field is missing or `<wiki-root>/config/link-style.md` does not exist, default to `obsidian` (`[[slug]]`). Otherwise, read `<wiki-root>/config/link-style.md`. All link scanning below uses the `## Parse` rule from that file (which may match more than one form). The lint report you write is itself a wiki page, so its cross-references use the `## Emit` rule.
+
 ## Why the pipeline
 
 The old whole-wiki pass loaded every page body into one context — it nuked the context window
@@ -97,7 +99,9 @@ First, the one body-level check that needs no page bodies: read `wiki/overview.m
 **🔵 Coverage gaps** — open questions that a web search or a new ingest could answer.
 
 Then write `wiki/pages/lint-<today>.md` (do not ask permission — always write this), merging
-Phase 1 findings, the deduped Phase 2 findings, and the coverage gaps:
+Phase 1 findings, the deduped Phase 2 findings, and the coverage gaps. The template below
+shows slug references in obsidian form for readability; in the actual report you write, every
+slug reference must follow the `## Emit` rule from `config/link-style.md`:
 
 ```markdown
 ---
@@ -172,8 +176,8 @@ automatically — do not hand-edit `index.md`. Run `python bin/generate-index.py
 ### Offer concrete fixes
 
 For each fixable category, offer:
-- **Broken links:** "Remove the broken `[[slug]]` references? (I'll show each change before writing)"
-- **Missing cross-references:** "Add the missing links between these page pairs?"
+- **Broken links:** "Remove the broken slug references? (I'll show each change before writing)"
+- **Missing cross-references:** "Add the missing links between these page pairs?" (emit in the wiki's link_style)
 - **Colliding slugs / merge candidates:** "These look like the same concept (or a homonym needing disambiguation) — want to run `wiki-merge` to consolidate or split them?" Do not fix these in `wiki-lint`; hand off to `wiki-merge`.
 - **Orphan page tags:** "Add `status: orphan` to frontmatter of orphan pages?"
 - **Missing frontmatter:** "Add missing frontmatter fields with placeholder values?"
@@ -193,6 +197,6 @@ Per SCHEMA's **Operation Log & Commit Convention**:
 - **Non-git wiki:** append to `wiki/log.md`:
   ```
   ## [<today>] lint | <N errors> errors, <N warnings> warnings, <N info> info
-  Report: [[lint-<today>]]
+  Report: <slug reference to lint-<today>, in the wiki's link_style>
   Fixed: <list what was auto-fixed, or "none">
   ```

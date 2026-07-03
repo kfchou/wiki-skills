@@ -21,7 +21,11 @@ WIKI_ROOT = Path(__file__).resolve().parent.parent
 PAGES_DIR = WIKI_ROOT / "wiki" / "pages"
 
 REQUIRED_FIELDS = ("title", "category", "summary", "tags", "sources", "created", "updated")
-LINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
+# Cross-reference forms (see config/link-style.md). Reading is permissive — match both so the
+# linter works on any wiki regardless of its link_style, and on wikis that mix the two forms:
+#   obsidian: [[slug]] or [[slug|display]]
+#   markdown: [[slug](pages/slug.md)]
+LINK_RE = re.compile(r"\[\[([^\]|]+?)(?:\|[^\]]*)?\](?:\(pages/[^)]*\.md\))?\]")
 STALE_MARKERS = ("current", "latest", "recent", "state-of-the-art")
 YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
 STALE_AGE_DAYS = 90
@@ -68,8 +72,13 @@ def parse_frontmatter(text):
 
 
 def links_in(text):
-    """Return the list of [[slug]] targets in a page body (display text after | dropped)."""
-    return [m.split("|")[0].strip() for m in LINK_RE.findall(text)]
+    """Return the cross-referenced slugs in a page body, in both link styles.
+
+    `LINK_RE` captures the slug from the obsidian form (`[[slug]]`, `[[slug|display]]`) and
+    the markdown form (`[[slug](pages/slug.md)]`) alike, so this works regardless of the
+    wiki's link_style. See config/link-style.md.
+    """
+    return [m.strip() for m in LINK_RE.findall(text)]
 
 
 def is_page(path):

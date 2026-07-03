@@ -52,10 +52,17 @@ def write_page(wiki_root, slug, *, title=None, category=None, summary=None,
 
 
 def write_schema(wiki_root, domain="ML research",
-                 categories=("Sources", "Entities", "Concepts", "Analyses")):
+                 categories=("Sources", "Entities", "Concepts", "Analyses"),
+                 link_style=None):
+    """Write a minimal SCHEMA.md. `link_style` (obsidian|markdown), if given, adds the
+    Cross-References field; omit it to simulate an older wiki with no link_style declared."""
     cats = "\n".join(categories)
+    xref = ""
+    if link_style is not None:
+        xref = f"## Cross-References\n- **link_style:** {link_style}\n- **link_style_rules:** config/link-style.md\n\n"
     (Path(wiki_root) / "SCHEMA.md").write_text(
         f"# Wiki Schema\n\n## Identity\n- **Domain:** {domain}\n\n"
+        f"{xref}"
         f"## Index Categories\n{cats}\n\n## Conventions\n- x\n",
         encoding="utf-8",
     )

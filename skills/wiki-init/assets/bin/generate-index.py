@@ -38,6 +38,31 @@ def parse_frontmatter(text):
     return fm
 
 
+def read_link_style():
+    """Return the wiki's cross-reference style: 'markdown' or 'obsidian' (default).
+
+    Reads the `link_style:` field from SCHEMA.md's Cross-References section. A missing
+    field (older wiki) or an unfilled `<...>` placeholder defaults to obsidian.
+    """
+    if not SCHEMA.exists():
+        return "obsidian"
+    for line in SCHEMA.read_text(encoding="utf-8").splitlines():
+        if "link_style:" not in line:
+            continue
+        value = line.split("link_style:", 1)[1].strip().strip("*").strip()
+        if value.startswith("markdown"):
+            return "markdown"
+        return "obsidian"
+    return "obsidian"
+
+
+def format_ref(slug, link_style):
+    """Emit a cross-reference to `slug` in the wiki's link style (see config/link-style.md)."""
+    if link_style == "markdown":
+        return f"[[{slug}](pages/{slug}.md)]"
+    return f"[[{slug}]]"
+
+
 def read_schema():
     """Return (domain, [categories]) parsed from SCHEMA.md."""
     domain, categories = "", []
@@ -62,6 +87,7 @@ def main():
     if not PAGES_DIR.exists():
         sys.exit(f"no pages directory at {PAGES_DIR}")
     domain, schema_categories = read_schema()
+    link_style = read_link_style()
 
     pages = []
     for path in sorted(PAGES_DIR.glob("*.md")):
@@ -98,7 +124,7 @@ def main():
         for p in entries:
             summary = f" — {p['summary']}" if p["summary"] else ""
             date = f" _({p['created']})_" if p["created"] else ""
-            out.append(f"- [[{p['slug']}]]{summary}{date}")
+            out.append(f"- {format_ref(p['slug'], link_style)}{summary}{date}")
         out.append("")
 
     INDEX.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")

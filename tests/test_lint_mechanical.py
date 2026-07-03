@@ -99,6 +99,29 @@ class LintMechanicalFullTest(unittest.TestCase):
         findings = self.run_full()["findings"]["missing_concept"]
         self.assertEqual(findings, [{"slug": "ghost", "count": 3}])  # rare seen once: excluded
 
+    def test_markdown_form_links_resolve_for_broken_link_check(self):
+        # markdown link_style: [[slug](pages/slug.md)] must be recognized, so a link to an
+        # existing page is not flagged broken and a link to a missing page is.
+        complete_page(self.root, "alpha",
+                      body="see [[beta](pages/beta.md)] and [[ghost](pages/ghost.md)]")
+        complete_page(self.root, "beta", body="see [[alpha](pages/alpha.md)]")
+        findings = self.run_full()["findings"]["broken_links"]
+        self.assertEqual(findings, [{"page": "alpha", "link": "ghost"}])
+
+    def test_markdown_form_links_count_as_inbound_for_orphans(self):
+        complete_page(self.root, "hub", body="see [[leaf](pages/leaf.md)]")
+        complete_page(self.root, "leaf", body="no links out")
+        orphans = {f["page"] for f in self.run_full()["findings"]["orphans"]}
+        self.assertIn("hub", orphans)       # nothing links to hub
+        self.assertNotIn("leaf", orphans)   # hub's markdown-form link counts as inbound
+
+    def test_mixed_link_forms_both_resolve(self):
+        # a wiki mid-migration may carry both forms; the linter must read both.
+        complete_page(self.root, "a", body="[[b]] and [[c](pages/c.md)]")
+        complete_page(self.root, "b", body="text")
+        complete_page(self.root, "c", body="text")
+        self.assertEqual(self.run_full()["findings"]["broken_links"], [])
+
 
 COMPLETE_FM = ("---\ntitle: T\ncategory: Concepts\nsummary: s\ntags: [ml]\n"
                "sources: [src]\ncreated: 2026-06-21\nupdated: 2026-06-21\n---\n")
@@ -168,6 +191,22 @@ class LintMechanicalStagedTest(unittest.TestCase):
         self.init_repo()
         self.page("alpha", body="links to [[beta]]")
         self.page("beta", body="links to [[alpha]]")
+        self.git("add", "-A")
+        out = self.run_staged()
+        self.assertEqual(out.returncode, 0, out.stderr)
+
+    def test_markdown_form_broken_link_blocks_commit(self):
+        self.init_repo()
+        self.page("alpha", body="links to [[ghost](pages/ghost.md)]")
+        self.git("add", "-A")
+        out = self.run_staged()
+        self.assertEqual(out.returncode, 1, out.stdout)
+        self.assertIn("ghost", out.stderr)
+
+    def test_markdown_form_valid_link_passes(self):
+        self.init_repo()
+        self.page("alpha", body="links to [[beta](pages/beta.md)]")
+        self.page("beta", body="links to [[alpha](pages/alpha.md)]")
         self.git("add", "-A")
         out = self.run_staged()
         self.assertEqual(out.returncode, 0, out.stderr)

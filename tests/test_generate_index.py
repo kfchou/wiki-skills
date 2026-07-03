@@ -90,6 +90,30 @@ class GenerateIndexTest(unittest.TestCase):
         self.assertIn("[[good]]", index)
         self.assertNotIn("[[raw]]", index)
 
+    def test_missing_link_style_defaults_to_obsidian(self):
+        # setUp's schema declares no link_style — entries must use the obsidian form.
+        _harness.write_page(self.root, "attention", title="Attention",
+                            category="Sources", summary="The paper", created="2026-06-20")
+        index = self.run_generator()
+        self.assertIn("- [[attention]] — The paper _(2026-06-20)_", index)
+
+    def test_markdown_link_style_emits_wrapped_markdown_links(self):
+        _harness.write_schema(self.root, link_style="markdown")
+        _harness.write_page(self.root, "attention", title="Attention",
+                            category="Sources", summary="The paper", created="2026-06-20")
+        index = self.run_generator()
+        self.assertIn(
+            "- [[attention](pages/attention.md)] — The paper _(2026-06-20)_", index)
+        self.assertNotIn("- [[attention]] ", index)  # not the bare obsidian form
+
+    def test_obsidian_link_style_emits_bare_links(self):
+        _harness.write_schema(self.root, link_style="obsidian")
+        _harness.write_page(self.root, "attention", title="Attention",
+                            category="Sources", summary="The paper", created="2026-06-20")
+        index = self.run_generator()
+        self.assertIn("- [[attention]] — The paper _(2026-06-20)_", index)
+        self.assertNotIn("pages/attention.md", index)
+
 
 if __name__ == "__main__":
     unittest.main()
