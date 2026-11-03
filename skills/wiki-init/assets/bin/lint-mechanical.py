@@ -57,10 +57,12 @@ def is_field_line(line):
     return bool(line.strip()) and not line.lstrip().startswith("#") and ":" in line
 
 
+def is_quoted(value):
+    return len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'"
+
+
 def unquote(value):
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-        return value[1:-1]
-    return value
+    return value[1:-1] if is_quoted(value) else value
 
 
 def parse_value(value):
@@ -178,13 +180,14 @@ def has_stale_content(body, today):
     return has_marker or any(int(m.group()) <= today.year - 2 for m in YEAR_RE.finditer(body))
 
 
+def is_stale(page, today):
+    """True if the page was last updated long ago and its body looks out of date."""
+    age = age_in_days((page["fm"] or {}).get("updated"), today)
+    return age is not None and age > STALE_AGE_DAYS and has_stale_content(page["body"], today)
+
+
 def check_stale_date(pages, today):
-    out = []
-    for slug, page in pages.items():
-        age = age_in_days((page["fm"] or {}).get("updated"), today)
-        if age is not None and age > STALE_AGE_DAYS and has_stale_content(page["body"], today):
-            out.append({"page": slug})
-    return out
+    return [{"page": slug} for slug, page in pages.items() if is_stale(page, today)]
 
 
 def check_missing_concept(pages):

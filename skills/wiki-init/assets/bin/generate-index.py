@@ -28,10 +28,12 @@ def is_field_line(line):
     return bool(line.strip()) and not line.lstrip().startswith("#") and ":" in line
 
 
+def is_quoted(value):
+    return len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'"
+
+
 def unquote(value):
-    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-        return value[1:-1]
-    return value
+    return value[1:-1] if is_quoted(value) else value
 
 
 def parse_frontmatter(text):
