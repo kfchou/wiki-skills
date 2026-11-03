@@ -43,31 +43,46 @@ def split_doc(text):
     return parse_frontmatter(text), "\n".join(lines[end + 1:])
 
 
+def frontmatter_lines(text):
+    """Return the lines between the opening and closing `---`, or None if absent/unterminated."""
+    if not text.startswith("---"):
+        return None
+    lines = text.splitlines()
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    return None if end is None else lines[1:end]
+
+
+def is_field_line(line):
+    """True for a `key: value` line; blank lines and `#` comments are not fields."""
+    return bool(line.strip()) and not line.lstrip().startswith("#") and ":" in line
+
+
+def unquote(value):
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value
+
+
+def parse_value(value):
+    """`[a, b]` becomes a list; anything else is a string with surrounding quotes removed."""
+    if value.startswith("[") and value.endswith("]"):
+        return [v.strip() for v in value[1:-1].split(",") if v.strip()]
+    return unquote(value)
+
+
 def parse_frontmatter(text):
     """Return the page's frontmatter as a dict, or None if absent/unterminated.
 
     Scalar `key: value` lines become strings; `key: [a, b]` inline lists become lists.
     No third-party YAML dependency.
     """
-    if not text.startswith("---"):
-        return None
-    lines = text.splitlines()
-    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
-    if end is None:
+    lines = frontmatter_lines(text)
+    if lines is None:
         return None
     fm = {}
-    for line in lines[1:end]:
-        if not line.strip() or line.lstrip().startswith("#") or ":" not in line:
-            continue
+    for line in filter(is_field_line, lines):
         key, _, value = line.partition(":")
-        key, value = key.strip(), value.strip()
-        if value.startswith("[") and value.endswith("]"):
-            items = [v.strip() for v in value[1:-1].split(",") if v.strip()]
-            fm[key] = items
-        else:
-            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-                value = value[1:-1]
-            fm[key] = value
+        fm[key.strip()] = parse_value(value.strip())
     return fm
 
 
@@ -148,21 +163,26 @@ def check_slug_collisions(pages):
     return out
 
 
+def age_in_days(updated, today):
+    """Days since an ISO `updated` date, or None if it is missing or malformed."""
+    try:
+        return (today - date.fromisoformat(updated)).days
+    except (TypeError, ValueError):
+        return None
+
+
+def has_stale_content(body, today):
+    """True if the body mentions a stale marker or a year at least two years old."""
+    body = body.lower()
+    has_marker = any(m in body for m in STALE_MARKERS)
+    return has_marker or any(int(m.group()) <= today.year - 2 for m in YEAR_RE.finditer(body))
+
+
 def check_stale_date(pages, today):
     out = []
     for slug, page in pages.items():
-        fm = page["fm"] or {}
-        updated = fm.get("updated")
-        try:
-            age = (today - date.fromisoformat(updated)).days
-        except (TypeError, ValueError):
-            continue
-        if age <= STALE_AGE_DAYS:
-            continue
-        body = page["body"].lower()
-        has_marker = any(m in body for m in STALE_MARKERS)
-        has_old_year = any(int(m.group()) <= today.year - 2 for m in YEAR_RE.finditer(body))
-        if has_marker or has_old_year:
+        age = age_in_days((page["fm"] or {}).get("updated"), today)
+        if age is not None and age > STALE_AGE_DAYS and has_stale_content(page["body"], today):
             out.append({"page": slug})
     return out
 
@@ -178,6 +198,21 @@ def check_missing_concept(pages):
     return [{"slug": s, "count": n} for s, n in sorted(counts.items()) if n >= 3]
 
 
+def pages_by_tag(pages):
+    by_tag = {}
+    for slug, page in pages.items():
+        for tag in (page["fm"] or {}).get("tags") or []:
+            by_tag.setdefault(tag, set()).add(slug)
+    return by_tag
+
+
+def split_cluster(members, cap):
+    """Return `members` as one cluster, or as `cap`-sized chunks flagged `split`."""
+    if len(members) <= cap:
+        return [{"pages": members, "split": False}]
+    return [{"pages": members[i:i + cap], "split": True} for i in range(0, len(members), cap)]
+
+
 def build_clusters(pages, cap):
     """Group pages by shared tag into contradiction-sweep clusters.
 
@@ -186,21 +221,12 @@ def build_clusters(pages, cap):
     larger than `cap` is deterministically split into alphabetical chunks, each flagged
     `split` so the report can note the recall caveat.
     """
-    by_tag = {}
-    for slug, page in pages.items():
-        for tag in (page["fm"] or {}).get("tags") or []:
-            by_tag.setdefault(tag, set()).add(slug)
-
-    candidates = {frozenset(s) for s in by_tag.values() if len(s) >= 2}
+    candidates = {frozenset(s) for s in pages_by_tag(pages).values() if len(s) >= 2}
     kept = [c for c in candidates if not any(c < other for other in candidates)]
 
     out = []
     for members in sorted((sorted(c) for c in kept)):
-        if len(members) > cap:
-            for i in range(0, len(members), cap):
-                out.append({"pages": members[i:i + cap], "split": True})
-        else:
-            out.append({"pages": members, "split": False})
+        out.extend(split_cluster(members, cap))
     return out
 
 

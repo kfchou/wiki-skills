@@ -14,27 +14,39 @@ SCHEMA = WIKI_ROOT / "SCHEMA.md"
 INDEX = WIKI_ROOT / "wiki" / "index.md"
 
 
+def frontmatter_lines(text):
+    """Return the lines between the opening and closing `---`, or None if absent/unterminated."""
+    if not text.startswith("---"):
+        return None
+    lines = text.splitlines()
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    return None if end is None else lines[1:end]
+
+
+def is_field_line(line):
+    """True for a `key: value` line; blank lines and `#` comments are not fields."""
+    return bool(line.strip()) and not line.lstrip().startswith("#") and ":" in line
+
+
+def unquote(value):
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value
+
+
 def parse_frontmatter(text):
     """Return the page's frontmatter as a dict, or None if absent/unterminated.
 
     Only scalar `key: value` lines are needed (title, category, summary, created).
     List values like `tags: [...]` are ignored. No third-party deps.
     """
-    if not text.startswith("---"):
-        return None
-    lines = text.splitlines()
-    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
-    if end is None:
+    lines = frontmatter_lines(text)
+    if lines is None:
         return None
     fm = {}
-    for line in lines[1:end]:
-        if not line.strip() or line.lstrip().startswith("#") or ":" not in line:
-            continue
+    for line in filter(is_field_line, lines):
         key, _, value = line.partition(":")
-        key, value = key.strip(), value.strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-            value = value[1:-1]
-        fm[key] = value
+        fm[key.strip()] = unquote(value.strip())
     return fm
 
 
@@ -63,6 +75,12 @@ def format_ref(slug, link_style):
     return f"[[{slug}]]"
 
 
+def schema_category(stripped):
+    """Return the category named by a line under `## Index categories`, or None."""
+    cat = stripped.lstrip("-").strip()
+    return cat if cat and not cat.startswith("<") else None
+
+
 def read_schema():
     """Return (domain, [categories]) parsed from SCHEMA.md."""
     domain, categories = "", []
@@ -75,20 +93,13 @@ def read_schema():
             domain = line.split("**Domain:**", 1)[1].strip()
         if stripped.startswith("## "):
             in_categories = stripped[3:].strip().lower() == "index categories"
-            continue
-        if in_categories and stripped:
-            cat = stripped.lstrip("-").strip()
-            if cat and not cat.startswith("<"):
-                categories.append(cat)
+        elif in_categories and (cat := schema_category(stripped)):
+            categories.append(cat)
     return domain, categories
 
 
-def main():
-    if not PAGES_DIR.exists():
-        sys.exit(f"no pages directory at {PAGES_DIR}")
-    domain, schema_categories = read_schema()
-    link_style = read_link_style()
-
+def collect_pages():
+    """Return one entry per page with frontmatter, skipping audit reports."""
     pages = []
     for path in sorted(PAGES_DIR.glob("*.md")):
         if path.name.startswith("audit-"):
@@ -104,32 +115,49 @@ def main():
             "summary": fm.get("summary", ""),
             "created": fm.get("created", ""),
         })
+    return pages
 
-    extras = sorted({p["category"] for p in pages
-                     if p["category"] not in schema_categories
-                     and p["category"] != "Uncategorized"})
+
+def order_categories(pages, schema_categories):
+    """SCHEMA categories first, then unknown ones alphabetically, then Uncategorized."""
+    present = {p["category"] for p in pages}
+    extras = sorted(present - set(schema_categories) - {"Uncategorized"})
     ordered = list(schema_categories) + extras
-    if any(p["category"] == "Uncategorized" for p in pages):
+    if "Uncategorized" in present:
         ordered.append("Uncategorized")
+    return ordered
+
+
+def render_category(cat, pages, link_style):
+    """Return the index lines for one category, or [] if it has no pages."""
+    entries = [p for p in pages if p["category"] == cat]
+    if not entries:
+        return []
+    entries.sort(key=lambda p: p["title"])              # tiebreak: title asc
+    entries.sort(key=lambda p: p["created"], reverse=True)  # primary: created desc
+    out = [f"### {cat}"]
+    for p in entries:
+        summary = f" — {p['summary']}" if p["summary"] else ""
+        date = f" _({p['created']})_" if p["created"] else ""
+        out.append(f"- {format_ref(p['slug'], link_style)}{summary}{date}")
+    out.append("")
+    return out
+
+
+def main():
+    if not PAGES_DIR.exists():
+        sys.exit(f"no pages directory at {PAGES_DIR}")
+    domain, schema_categories = read_schema()
+    link_style = read_link_style()
+    pages = collect_pages()
 
     out = [f"# Wiki Index — {domain}".rstrip(), "",
            "<!-- Generated by bin/generate-index.py. Do not edit by hand. -->", ""]
-    for cat in ordered:
-        entries = [p for p in pages if p["category"] == cat]
-        if not entries:
-            continue
-        entries.sort(key=lambda p: p["title"])              # tiebreak: title asc
-        entries.sort(key=lambda p: p["created"], reverse=True)  # primary: created desc
-        out.append(f"### {cat}")
-        for p in entries:
-            summary = f" — {p['summary']}" if p["summary"] else ""
-            date = f" _({p['created']})_" if p["created"] else ""
-            out.append(f"- {format_ref(p['slug'], link_style)}{summary}{date}")
-        out.append("")
+    for cat in order_categories(pages, schema_categories):
+        out.extend(render_category(cat, pages, link_style))
 
     INDEX.write_text("\n".join(out).rstrip() + "\n", encoding="utf-8")
     print(f"wrote {INDEX} ({len(pages)} pages)")
-
 
 if __name__ == "__main__":
     main()
